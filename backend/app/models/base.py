@@ -15,7 +15,7 @@ class BaseModel(Base):
 
 # reference table for all possible actions in the system
 class ActionType(Base):
-    __table_name__ = "action_types"
+    __tablename__ = "action_types"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(20), unique=True, nullable=False)  # approve, reject, processing, reprocess
@@ -24,7 +24,7 @@ class ActionType(Base):
 
 # log all actions performed on any record
 class RecordActionLog(Base):
-    __table_name__ = "record_action_logs"
+    __tablename__ = "record_action_logs"
 
     id = Column(Integer, primary_key=True, index=True)
     record_table = Column(String(50), nullable=False)

@@ -2,8 +2,9 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, Foreign
 from sqlalchemy.orm import relationship
 from .base import BaseModel
 
+
 # main vehicle registration table - stores all extracted data
-class VehicalRegistrationMaster(BaseModel):
+class VehicleRegistrationMaster(BaseModel):
 
     __tablename__ = "vehicle_registration_master"
 
@@ -42,35 +43,35 @@ class VehicalRegistrationMaster(BaseModel):
     error_text = Column(Text)
 
     # relationships with child tables
-    undercover_records = relationship("VehicalRegisrationUnderCover", back_populates="master_record")
+    undercover_records = relationship("VehicleRegistrationUnderCover", back_populates="master_record")
     fictitious_records = relationship("VehicleRegistrationFictitious", back_populates="master_record")
     contacts = relationship("VehicleRegistrationContact", back_populates="master_record")
     reciprocal_issued = relationship("VehicleRegistrationReciprocalIssued", back_populates="master_record")
     reciprocal_received = relationship("VehicleRegistrationReciprocalReceived", back_populates="master_record")
 
-#undercover/confidential vehicle registrations
-class VehicalRegistrationUnderCover(BaseModel):
+# undercover/confidential vehicle registrations
+class VehicleRegistrationUnderCover(BaseModel):
     __tablename__ = "vehicle_registration_undercover"
 
-    master_record_id = Column(Integer, ForeignKey("vehicle_registration_master.id"))    #linking to measter table
+    master_record_id = Column(Integer, ForeignKey("vehicle_registration_master.id"))    # linking to master table
 
     license_number = Column(String(20), unique=True, index=True, nullable=True)
     vehicle_id_number = Column(String(17), index=True)
     registered_owner = Column(String(200), nullable=False)
     
-    #address information  
+    # address information  
     address = Column(Text)
     city = Column(String(100))
     state = Column(String(50), default="California")
     zip_code = Column(String(10))
 
-    #vehcile information
+    # vehicle information
     make = Column(String(50))
     year_model = Column(Integer)
     class_type = Column(String(50))
     type_license = Column(String(50))
 
-    #reg info
+    # reg info
     expiration_date = Column(Date)
     date_issued = Column(Date)
     date_fee_received = Column(Date)
@@ -134,7 +135,7 @@ class VehicleRegistrationUnderCoverTrapInfo(BaseModel):
     number = Column(String(100))
 
     # relation
-    fictitious_record = relationship("VehicleRegistrationFictitious", back_populates="trap_info")
+    undercover_record = relationship("VehicleRegistrationUnderCover", back_populates="trap_info")
 
 #contact information linked to vehicle records
 class VehicleRegistrationContact(BaseModel):
@@ -166,5 +167,31 @@ class VehicleRegistrationReciprocalReceived(BaseModel):
     
     #relation
     master_record = relationship("VehicleRegistrationMaster", back_populates="reciprocal_received")
+
+
+class VehicleRegistrationFictitiousTrapInfo(BaseModel):
+
+    __tablename__ = "vehicle_registration_fictitious_trap_info"
+
+    fictitious_id = Column(Integer, ForeignKey("vehicle_registration_fictitious.id"))
+    date = Column(Date)
+    number = Column(String(100))
+
+    fictitious_record = relationship("VehicleRegistrationFictitious", back_populates="trap_info")
+
+
+class VehicleRegistrationReciprocalIssued(BaseModel):
+
+    __tablename__ = "vehicle_registration_reciprocal_issued"
+
+    master_record_id = Column(Integer, ForeignKey("vehicle_registration_master.id"))
+    description = Column(Text)
+    license_plate = Column(String(20))
+    state = Column(String(50))
+    year_of_renewal = Column(Integer)
+    cancellation_date = Column(Date)
+    sticker_number = Column(String(50))
+
+    master_record = relationship("VehicleRegistrationMaster", back_populates="reciprocal_issued")
 
 
