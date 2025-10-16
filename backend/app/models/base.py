@@ -1,7 +1,6 @@
-from sqlalchemy import Column, DateTime, Integer, String, Time, Boolean, Text, ForeignKey, Numeric, Date
+from sqlalchemy import Column, DateTime, Integer, String, Time, Boolean, Text, ForeignKey, Numeric, Date, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from datetime import datetime
 
 Base = declarative_base()
 
@@ -10,8 +9,8 @@ class BaseModel(Base):
     __abstract__ = True #wont create tabkle
 
     id = Column(Integer, primary_key=True, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
 
 # reference table for all possible actions in the system
 class ActionType(Base):
@@ -31,7 +30,7 @@ class RecordActionLog(Base):
     action_type_id = Column(Integer, ForeignKey("action_types.id"))
     user_id = Column(Integer, nullable=True)
     notes= Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=func.now())
     ip_address= Column(String(50))
     
     action_type = relationship("ActionType", back_populates="action_logs")  #relationship
