@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import VehicleRegistrationMaster
+from app.api.routes import vehicle_registration_routes
 
 
 app = FastAPI()
@@ -26,6 +27,8 @@ async def health():
         "status": 200,
         "message": "Server Running"
     }
+
+app.include_router(vehicle_registration_routes.router, prefix="/api")
 
 @app.get("/test")
 async def test(db: Session = Depends(get_db)):
