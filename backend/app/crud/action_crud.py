@@ -24,6 +24,10 @@ def perform_record_action(
     if not record:
         raise ValueError(f"Record with ID {action_data.record_id} not found")
     
+    action_type = get_action_type_by_name(db, action_data.action_type)
+    if not action_type:
+        raise ValueError(f"Invalid action type: {action_data.action_type}") #for logging purpose
+    
     current_status = record.approval_status
     if action_data.action_type == "approve" and current_status == "approved":
         raise ValueError("Record is already approved")
@@ -47,9 +51,10 @@ def perform_record_action(
     log_entry = RecordActionLog(
         record_table=action_data.record_table,
         record_id=action_data.record_id,
+        action_type_id=action_type.id,           # fk to ActionType
         user_id=action_data.user_id,
         notes=action_data.notes,
-        created_at=datetime.utcnow(),
+        created_at=datetime.datetime.now(datetime.UTC),
         ip_address=ip_address or "unknown"
     )
     
@@ -66,10 +71,7 @@ def perform_record_action(
     }
 
 def get_record_action_history(db: Session, record_id: int):
-    """
-    Get all actions performed on a specific record
-    Useful for audit trail and debugging
-    """
+
     return db.query(RecordActionLog).join(ActionType).filter(
         RecordActionLog.record_id == record_id,
         RecordActionLog.record_table == "vehicle_registration_master"
