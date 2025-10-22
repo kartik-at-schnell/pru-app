@@ -8,7 +8,7 @@ from app.schemas.vehicle_registration_schema import(
 
 #create op
 def create_vehicle_record(db:Session, record_data: VehicleRegistrationCreate):
-    new_record = VehicleRegistrationMaster(**record_data.model_dump())    #converts the Pydantic model instance into a dictionary
+    new_record = VehicleRegistrationMaster(**record_data.dict())    #converts the Pydantic model instance into a dictionary
     db.add(new_record)
     db.commit()
     db.refresh(new_record)
