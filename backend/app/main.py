@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import VehicleRegistrationMaster
 from app.api.routes import vehicle_registration_routes
+from app.api.routes import action_routes
+from app.api.routes import dashboard_routes
 
 
 app = FastAPI()
@@ -29,6 +31,8 @@ async def health():
     }
 
 app.include_router(vehicle_registration_routes.router, prefix="/api")
+app.include_router(action_routes.router, prefix="/api")
+app.include_router(dashboard_routes.router, prefix="/api")
 
 @app.get("/test")
 async def test(db: Session = Depends(get_db)):
