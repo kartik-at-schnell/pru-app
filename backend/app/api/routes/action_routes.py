@@ -29,7 +29,7 @@ def perform_action(
             record_id=action_data.record_id,
             new_status=result["new_status"],
             action_logged=True,
-            timestamp=result["log_entry"].created_at
+            time_stamp=result["log_entry"].created_at
         )
         
     except ValueError as e:
