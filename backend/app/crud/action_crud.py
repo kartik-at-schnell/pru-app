@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from app.models import VehicleRegistrationMaster, RecordActionLog, ActionType
 from app.schemas.action_schema import ActionRequest
@@ -55,7 +55,7 @@ def perform_record_action(
         action_type_id=action_type.id,           # fk to ActionType
         user_id=action_data.user_id,
         notes=action_data.notes,
-        created_at=func.now(),
+        created_at=datetime.now(timezone.utc),
         ip_address=ip_address or "unknown"
     )
     
