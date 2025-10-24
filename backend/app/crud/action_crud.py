@@ -59,7 +59,8 @@ def perform_record_action(
         ip_address=ip_address or "unknown"
     )
     
-    db.add(log_entry)          
+    db.add(log_entry)
+    db.add(record)          
     db.commit()                 
     db.refresh(record)          
     db.refresh(log_entry)       

@@ -1,14 +1,33 @@
-from sqlalchemy.orm import Session
+# FILE: app/crud/vehicle_registration_crud.py
+
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
-from app.models import VehicleRegistrationMaster
-from app.schemas.vehicle_registration_schema import(
-    VehicleRegistrationCreate,
-    VehicleRegistrationUpdate
+
+# --- Import all the models we need ---
+# (This part of your file was already correct)
+from app.models import (
+    VehicleRegistrationMaster, 
+    VehicleRegistrationFictitious, 
+    VehicleRegistrationUnderCover,
+    VehicleRegistrationContact,
+    VehicleRegistrationReciprocalIssued,
+    VehicleRegistrationReciprocalReceived,
+    VehicleRegistrationUnderCoverTrapInfo,
+    VehicleRegistrationFictitiousTrapInfo
 )
 
-#create op
-def create_vehicle_record(db:Session, record_data: VehicleRegistrationCreate):
-    new_record = VehicleRegistrationMaster(**record_data.model_dump())    #converts the Pydantic model instance into a dictionary
+# --- 1. THE IMPORT FIX ---
+# We are now importing the NEW schema names that
+# actually exist in your vehicle_registration_schema.py file
+from app.schemas.vehicle_registration_schema import(
+    VehicleRegistrationMasterCreate,  # <-- Was VehicleRegistrationCreate
+    VehicleRegistrationMasterBase     # <-- We'll use this for updates
+)
+
+# --- 2. THE FUNCTION SIGNATURE FIX ---
+# We change 'VehicleRegistrationCreate' to 'VehicleRegistrationMasterCreate'
+def create_vehicle_record(db:Session, record_data: VehicleRegistrationMasterCreate):
+    new_record = VehicleRegistrationMaster(**record_data.model_dump())
     db.add(new_record)
     db.commit()
     db.refresh(new_record)
@@ -25,18 +44,23 @@ def get_all_vehicles(db: Session, skip:int= 0, limit:int = 30, search: Optional[
 
     query = db.query(VehicleRegistrationMaster)
     if search:
-        query = query.filter(VehicleRegistrationMaster.license_number.ilike(f"%{search}"))  #only for searching by license no
-        return query.offset(skip).limit(limit).all()
+        query = query.filter(VehicleRegistrationMaster.license_number.ilike(f"%{search}"))
+    
+    # I also fixed the bug from your file where this line was missing
+    # so pagination works even without a search.
+    return query.offset(skip).limit(limit).all()
 
-# update
-def update_vehicle_record(db:Session, record_id: int, update_data: VehicleRegistrationUpdate):
+# --- 3. THE FUNCTION SIGNATURE FIX ---
+# We change 'VehicleRegistrationUpdate' to 'VehicleRegistrationMasterBase'
+def update_vehicle_record(db:Session, record_id: int, update_data: VehicleRegistrationMasterBase):
 
     record = get_vehicle_by_id(db, record_id)
 
     if not record:
         return None
     
-    for key, value in update_data.dict(exclude_unset = True).items():
+    # 'model_dump()' is the correct new Pydantic method
+    for key, value in update_data.model_dump(exclude_unset = True).items():
         setattr(record, key, value)
 
     db.commit()
@@ -56,4 +80,25 @@ def delete_vehicle_record(db:Session, record_id: int):
 
     return record
 
-
+# function to get all the details for one vehicle
+# (This is the function we added before, it is correct)
+def get_vehicle_master_details(db: Session, master_id: int):
+    
+    query = (
+        db.query(VehicleRegistrationMaster)
+        .filter(VehicleRegistrationMaster.id == master_id)
+        .options(
+            
+            joinedload(VehicleRegistrationMaster.contacts),
+            joinedload(VehicleRegistrationMaster.reciprocal_issued),
+            joinedload(VehicleRegistrationMaster.reciprocal_received),
+            
+            joinedload(VehicleRegistrationMaster.undercover_records)
+            .subqueryload(VehicleRegistrationUnderCover.trap_info),
+            
+            joinedload(VehicleRegistrationMaster.fictitious_records)
+            .subqueryload(VehicleRegistrationFictitious.trap_info)
+        )
+    )
+    
+    return query.first()
