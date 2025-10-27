@@ -8,7 +8,6 @@ class ActionRequest(BaseModel):
     record_id: int
     record_table: str
     action_type: str
-    user_id: Optional[int] = 1
     notes: Optional[str]= None
 
 #response schema
@@ -21,7 +20,7 @@ class ActionResponse(BaseModel):
     time_stamp: datetime
 
     class Config:
-        orm_mode = True #makes aut conversion from sqlAlc obj to json
+        from_attributes = True #makes aut conversion from sqlAlc obj to json
 
 # schema to view action logs
 class ActionLogOut(BaseModel):
@@ -35,5 +34,5 @@ class ActionLogOut(BaseModel):
     ip_address: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
