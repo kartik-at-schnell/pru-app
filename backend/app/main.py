@@ -6,6 +6,7 @@ from app.models import VehicleRegistrationMaster
 from app.api.routes import vehicle_registration_routes
 from app.api.routes import action_routes
 from app.api.routes import dashboard_routes
+from app.api.routes import auth_routes
 
 
 app = FastAPI()
@@ -33,6 +34,12 @@ async def health():
 app.include_router(vehicle_registration_routes.router, prefix="/api")
 app.include_router(action_routes.router, prefix="/api")
 app.include_router(dashboard_routes.router, prefix="/api")
+
+app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to the PRU Automation API"}
 
 @app.get("/test")
 async def test(db: Session = Depends(get_db)):

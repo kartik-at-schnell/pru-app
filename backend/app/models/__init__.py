@@ -10,6 +10,8 @@ from .vehicle_registration import (
     VehicleRegistrationReciprocalReceived
 )
 
+from .user_models import user_roles_table, User, Role
+
 # export all models for easy importing
 __all__ = [
     "Base",
@@ -24,4 +26,7 @@ __all__ = [
     "VehicleRegistrationContact",
     "VehicleRegistrationReciprocalIssued",
     "VehicleRegistrationReciprocalReceived",
+    "User",
+    "Role",
+    "user_roles_table"
 ]
