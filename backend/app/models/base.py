@@ -27,6 +27,7 @@ class RecordActionLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     record_table = Column(String(50), nullable=False)
+    record_id = Column(Integer, nullable=False)     #it was causing errrrr
     action_type_id = Column(Integer, ForeignKey("action_types.id"))
     user_id = Column(Integer, nullable=True)
     notes= Column(Text)

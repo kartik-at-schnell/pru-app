@@ -6,7 +6,7 @@ load_dotenv()
 class Settings:
     DATABASE_URL: str = os.getenv("DATABASE_URL")
 
-    SECRET_KEY: str = os.getenv("ECRET_KEY", "dev-secret-key")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-secret-key")
 
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     API_V1_STR: str = "/api/"

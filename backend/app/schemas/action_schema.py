@@ -6,7 +6,7 @@ from datetime import datetime
 
 class ActionRequest(BaseModel):
     record_id: int
-    rocord_table: str
+    record_table: str
     action_type: str
     user_id: Optional[int] = 1
     notes: Optional[str]= None

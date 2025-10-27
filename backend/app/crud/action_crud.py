@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from datetime import datetime
+from sqlalchemy import func
+from datetime import datetime, timezone
 from typing import Optional
 from app.models import VehicleRegistrationMaster, RecordActionLog, ActionType
 from app.schemas.action_schema import ActionRequest
@@ -54,11 +55,12 @@ def perform_record_action(
         action_type_id=action_type.id,           # fk to ActionType
         user_id=action_data.user_id,
         notes=action_data.notes,
-        created_at=datetime.datetime.now(datetime.UTC),
+        created_at=datetime.now(timezone.utc),
         ip_address=ip_address or "unknown"
     )
     
-    db.add(log_entry)          
+    db.add(log_entry)
+    db.add(record)          
     db.commit()                 
     db.refresh(record)          
     db.refresh(log_entry)       
@@ -76,3 +78,4 @@ def get_record_action_history(db: Session, record_id: int):
         RecordActionLog.record_id == record_id,
         RecordActionLog.record_table == "vehicle_registration_master"
     ).order_by(RecordActionLog.created_at.desc()).all()
+

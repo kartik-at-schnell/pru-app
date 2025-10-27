@@ -1,14 +1,24 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
-from app.models import VehicleRegistrationMaster
-from app.schemas.vehicle_registration_schema import(
-    VehicleRegistrationCreate,
-    VehicleRegistrationUpdate
+
+from app.models import (
+    VehicleRegistrationMaster, 
+    VehicleRegistrationFictitious, 
+    VehicleRegistrationUnderCover,
+    VehicleRegistrationContact,
+    VehicleRegistrationReciprocalIssued,
+    VehicleRegistrationReciprocalReceived,
+    VehicleRegistrationUnderCoverTrapInfo,
+    VehicleRegistrationFictitiousTrapInfo
 )
 
-#create op
-def create_vehicle_record(db:Session, record_data: VehicleRegistrationCreate):
-    new_record = VehicleRegistrationMaster(**record_data.model_dump())    #converts the Pydantic model instance into a dictionary
+from app.schemas.vehicle_registration_schema import(
+    VehicleRegistrationMasterCreate,  
+    VehicleRegistrationMasterBase     
+)
+
+def create_vehicle_record(db:Session, record_data: VehicleRegistrationMasterCreate):
+    new_record = VehicleRegistrationMaster(**record_data.model_dump())
     db.add(new_record)
     db.commit()
     db.refresh(new_record)
@@ -25,20 +35,22 @@ def get_all_vehicles(db: Session, skip:int= 0, limit:int = 30, search: Optional[
 
     query = db.query(VehicleRegistrationMaster)
     if search:
-        query = query.filter(VehicleRegistrationMaster.license_number.ilike(f"%{search}"))  #only for searching by license no
-        return query.offset(skip).limit(limit).all()
+        query = query.filter(VehicleRegistrationMaster.license_number.ilike(f"%{search}"))
+    
+    return query.offset(skip).limit(limit).all()
 
 # update
-def update_vehicle_record(db:Session, record_id: int, update_data: VehicleRegistrationUpdate):
+def update_vehicle_record(db:Session, record_id: int, update_data: VehicleRegistrationMasterBase):
 
     record = get_vehicle_by_id(db, record_id)
 
     if not record:
         return None
     
-    for key, value in update_data.dict(exclude_unset = True).items():
+    for key, value in update_data.model_dump(exclude_unset = True).items():
         setattr(record, key, value)
 
+    db.add(record)
     db.commit()
     db.refresh(record)
     return record
@@ -56,4 +68,24 @@ def delete_vehicle_record(db:Session, record_id: int):
 
     return record
 
-
+# function to get all the details for one vehicle
+def get_vehicle_master_details(db: Session, master_id: int):
+    
+    query = (
+        db.query(VehicleRegistrationMaster)
+        .filter(VehicleRegistrationMaster.id == master_id)
+        .options(
+            
+            joinedload(VehicleRegistrationMaster.contacts),
+            joinedload(VehicleRegistrationMaster.reciprocal_issued),
+            joinedload(VehicleRegistrationMaster.reciprocal_received),
+            
+            joinedload(VehicleRegistrationMaster.undercover_records)
+            .subqueryload(VehicleRegistrationUnderCover.trap_info),
+            
+            joinedload(VehicleRegistrationMaster.fictitious_records)
+            .subqueryload(VehicleRegistrationFictitious.trap_info)
+        )
+    )
+    
+    return query.first()
