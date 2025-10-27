@@ -2,6 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database  import get_db
+from app.database import get_db
+from app.models import user_models
+from app.security import get_current_user
+
 from app.crud.vehicle_registration_crud import (
     create_vehicle_record,
     get_all_vehicles,
@@ -22,8 +26,10 @@ router = APIRouter(prefix="/vehicle-registration", tags=["Vehicle Registration"]
 
 # CREATE route
 @router.post("/", response_model=VehicleRegistrationMaster)
-def create_vehicle(record: VehicleRegistrationMasterCreate, db: Session = Depends(get_db)):
-    return create_vehicle_record(db, record)
+def create_vehicle(record: VehicleRegistrationMasterCreate,
+                   db: Session = Depends(get_db),
+                   current_user: user_models.User = Depends(get_current_user)):
+    return create_vehicle_record(db, record) #it is a protected route now
 
 # Read all
 @router.get("/", response_model=List[VehicleRegistrationMaster])
@@ -31,13 +37,16 @@ def list_vehicles(
     skip: int = 0,
     limit: int = 25,
     search: Optional[str] = Query(None, description="Search by license number"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
 ):
     return get_all_vehicles(db, skip=skip, limit=limit, search=search)
 
 # Read one
 @router.get("/{record_id}", response_model=VehicleRegistrationMaster)
-def get_vehicle(record_id: int, db: Session = Depends(get_db)):
+def get_vehicle(record_id: int,
+                db: Session = Depends(get_db),
+                current_user: user_models.User = Depends(get_current_user)):
     record = get_vehicle_by_id(db, record_id)
     if not record:
         raise HTTPException(status_code=404, detail="Vehicle record not found")
@@ -45,7 +54,10 @@ def get_vehicle(record_id: int, db: Session = Depends(get_db)):
 
 # Update response_model and input schema
 @router.put("/{record_id}", response_model=VehicleRegistrationMaster)
-def update_vehicle(record_id: int, update_data: VehicleRegistrationMasterBase, db: Session = Depends(get_db)):
+def update_vehicle(record_id: int,
+                   update_data: VehicleRegistrationMasterBase,
+                   db: Session = Depends(get_db),
+                   current_user: user_models.User = Depends(get_current_user)):
     updated = update_vehicle_record(db, record_id, update_data)
     if not updated:
         raise HTTPException(status_code=404, detail="Vehicle record not found")
@@ -53,7 +65,9 @@ def update_vehicle(record_id: int, update_data: VehicleRegistrationMasterBase, d
 
 # delete
 @router.delete("/{record_id}")
-def delete_vehicle(record_id: int, db: Session = Depends(get_db)):
+def delete_vehicle(record_id: int,
+                   db: Session = Depends(get_db),
+                   current_user: user_models.User = Depends(get_current_user),):
     deleted = delete_vehicle_record(db, record_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Vehicle record not found")
@@ -62,7 +76,9 @@ def delete_vehicle(record_id: int, db: Session = Depends(get_db)):
 
 # Details endpoint
 @router.get("/{master_id}/details", response_model=VehicleRegistrationMasterDetails)
-def get_master_record_details(master_id: int, db: Session = Depends(get_db)):
+def get_master_record_details(master_id: int,
+                              db: Session = Depends(get_db),
+                              current_user: user_models.User = Depends(get_current_user)):
     
     db_record = get_vehicle_master_details(db=db, master_id=master_id)
     

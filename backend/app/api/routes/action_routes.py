@@ -4,6 +4,9 @@ from typing import List
 from app.database import get_db
 from app.crud.action_crud import perform_record_action, get_record_action_history
 from app.schemas.action_schema import ActionRequest, ActionResponse, ActionLogOut
+from app.database import get_db
+from app.models import user_models
+from app.security import get_current_user
 
 router = APIRouter(prefix="/actions", tags=["Record Actions"])
 
@@ -12,7 +15,8 @@ router = APIRouter(prefix="/actions", tags=["Record Actions"])
 def perform_action(
     action_data: ActionRequest, 
     request: Request,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
 ):
 
     try:
@@ -41,7 +45,9 @@ def perform_action(
 
 #history for a specific record
 @router.get("/{record_id}/history", response_model=List[ActionLogOut])
-def get_action_history(record_id: int, db: Session = Depends(get_db)):
+def get_action_history(record_id: int,
+                       db: Session = Depends(get_db),
+                       current_user: user_models.User = Depends(get_current_user)):
 
     try:
         history = get_record_action_history(db, record_id)
@@ -65,39 +71,48 @@ def get_action_history(record_id: int, db: Session = Depends(get_db)):
 
 #approve endpoint
 @router.post("/{record_id}/approve")
-def approve_record(record_id: int, request: Request, db: Session = Depends(get_db)):
+def approve_record(record_id: int,
+                   request: Request,
+                   db: Session = Depends(get_db),
+                   current_user: user_models.User = Depends(get_current_user)):
 
     action_data = ActionRequest(
         record_id=record_id,
         record_table="vehicle_registration_master",
         action_type="approve",
-        user_id=1,  #TODO: get from authentication laterrr
+        
         notes="Approved via quick action"
     )
     return perform_action(action_data, request, db)
 
 #reject endpoint
 @router.post("/{record_id}/reject")
-def reject_record(record_id: int, request: Request, db: Session = Depends(get_db)):
+def reject_record(record_id: int,
+                  request: Request,
+                  db: Session = Depends(get_db),
+                  current_user: user_models.User = Depends(get_current_user)):
 
     action_data = ActionRequest(
         record_id=record_id,
         record_table="vehicle_registration_master", 
         action_type="reject",
-        user_id=1,  # TODO: Get from authentication
+        user_id=current_user.id,
         notes="Rejected via quick action"
     )
     return perform_action(action_data, request, db)
 
 #hold endpoint
 @router.post("/{record_id}/hold")
-def hold_record(record_id: int, request: Request, db: Session = Depends(get_db)):
+def hold_record(record_id: int,
+                request: Request,
+                db: Session = Depends(get_db),
+                current_user: user_models.User = Depends(get_current_user)):
 
     action_data = ActionRequest(
         record_id=record_id,
         record_table="vehicle_registration_master",
         action_type="hold",
-        user_id=1,  # TODO: Get from authentication
+        user_id=current_user.id,
         notes="Put on hold via quick action"
     )
     return perform_action(action_data, request, db)
