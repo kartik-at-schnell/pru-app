@@ -119,6 +119,20 @@ class VehicleRegistrationMasterDetails(VehicleRegistrationMaster):
     class Config:
         from_attributes = True
 
+class VehicleRegistrationListItem(BaseModel):
+    id: str # Formatted ID: "VR-YYYY-NNNNN"
+    title: str # Formatted title
+    parent: str = "Vehicle Registration" # Static value
+    list_name: str = "Master Record" # Static value (maps to list/table name)
+    key: str # Formatted key: "VIN: XXXXX..."
+    owner: str # Formatted owner name: "J. Rivera"
+    submitted: str # Formatted date: "YYYY-MM-DD"
+    status: str # The approval_status field
+    canApprove: bool # Logic based on status
+
+    class Config:
+        from_attributes = True # Allow creating from DB model attributes
+
 #Create/Update schemas for all those other tables
 # main vehicle_registration_routes.py file needs these, so its POST/PUT routes kee working.
 
