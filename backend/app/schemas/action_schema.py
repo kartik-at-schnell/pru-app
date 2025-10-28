@@ -8,6 +8,7 @@ class ActionRequest(BaseModel):
     record_id: int
     record_table: str
     action_type: str
+    # user_id: Optional[int] = 1
     notes: Optional[str]= None
 
 #response schema
