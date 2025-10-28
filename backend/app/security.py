@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.crud import user_crud
 from app.models import user_models
+from app.models.user_models import Role
 
 load_dotenv()
 
@@ -68,3 +69,19 @@ async def get_current_user(
 
     #return the SQLAlchemy user obj
     return user
+
+# func for RBAC
+async def get_current_admin_user(
+    current_user: user_models.User = Depends(get_current_user)
+) -> user_models.User:
+
+    # check if the users roles relationship contains a role named Admin
+    is_admin = any(role.name == "Admin" for role in current_user.roles)
+
+    if not is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, # 403 means "Forbidden", not just "Unauthorized"
+            detail="Operation not permitted: Requires Admin privileges"
+        )
+    # If the check passes, return the user object
+    return current_user

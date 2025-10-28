@@ -24,7 +24,7 @@ def perform_action(
         client_ip = request.client.host
         
         # perform the action
-        result = perform_record_action(db, action_data, client_ip)
+        result = perform_record_action(db, action_data, current_user, client_ip)
         
         # return structured response
         return ActionResponse(

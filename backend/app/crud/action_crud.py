@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from app.models import VehicleRegistrationMaster, RecordActionLog, ActionType, user_models
 from app.schemas.action_schema import ActionRequest
+from app.models import user_models
 
 def get_action_type_by_name(db: Session, action_name: str):
 
