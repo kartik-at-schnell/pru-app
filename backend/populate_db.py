@@ -1,5 +1,4 @@
 # this is also vibe-coded
-
 from sqlalchemy.orm import Session
 from app.database import SessionLocal, engine
 from app.models import Base
@@ -18,7 +17,6 @@ def main():
         db.rollback()
     finally:
         db.close()
-    
     print("🎉 Database populated successfully!")
 
 if __name__ == "__main__":

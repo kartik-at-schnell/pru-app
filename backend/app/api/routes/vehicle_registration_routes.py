@@ -16,9 +16,7 @@ from app.schemas.vehicle_registration_schema import(
     VehicleRegistrationMasterBase,
     VehicleRegistrationMaster,
     VehicleRegistrationMasterDetails
-    
 )
-
 
 from app.schemas.base_schema import ApiResponse
 
@@ -48,41 +46,33 @@ def list_vehicles(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve records")
 
-
 # Read one
 @router.get("/{record_id}", response_model=ApiResponse[VehicleRegistrationMaster])
-def get_vehicle(record_id: int, db: Session = Depends(get_db)):
+def get_vehicle(record_id: str, db: Session = Depends(get_db)):
     record = get_vehicle_by_id(db, record_id)
     if not record:
         raise HTTPException(status_code=404, detail="Vehicle record not found")
-    
     return ApiResponse[VehicleRegistrationMaster](data=record)
 
-
 @router.put("/{record_id}", response_model=ApiResponse[VehicleRegistrationMaster])
-def update_vehicle(record_id: int, update_data: VehicleRegistrationMasterBase, db: Session = Depends(get_db)):
+def update_vehicle(record_id: str, update_data: VehicleRegistrationMasterBase, db: Session = Depends(get_db)):
     updated = update_vehicle_record(db, record_id, update_data)
     if not updated:
         raise HTTPException(status_code=404, detail="Vehicle record not found")
     return ApiResponse[VehicleRegistrationMaster](data=updated, message="Record updated successfully")
 
 # delete
-
 @router.delete("/{record_id}", response_model=ApiResponse)
-def delete_vehicle(record_id: int, db: Session = Depends(get_db)):
+def delete_vehicle(record_id: str, db: Session = Depends(get_db)):
     deleted = delete_vehicle_record(db, record_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Vehicle record not found")
     return ApiResponse(message=f"Record ID {record_id} deleted successfully")
 
-
 # Details endpoint
 @router.get("/{master_id}/details", response_model=ApiResponse[VehicleRegistrationMasterDetails])
-def get_master_record_details(master_id: int, db: Session = Depends(get_db)):
-
+def get_master_record_details(master_id: str, db: Session = Depends(get_db)):
     db_record = get_vehicle_master_details(db=db, master_id=master_id)
-
     if db_record is None:
         raise HTTPException(status_code=404, detail="Vehicle Master Record not found")
-
     return ApiResponse[VehicleRegistrationMasterDetails](data=db_record)
