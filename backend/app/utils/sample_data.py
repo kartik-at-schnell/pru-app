@@ -1,11 +1,10 @@
 # this is entirely vibe-coded
-
 from faker import Faker
 from sqlalchemy.orm import Session
 from datetime import date, timedelta
 import random
 from app.models import (
-    VehicleRegistrationMaster, 
+    VehicleRegistrationMaster,
     ActionType,
     VehicleRegistrationUnderCover,
     VehicleRegistrationFictitious
@@ -28,15 +27,15 @@ CAR_MAKES = [
 def generate_california_license_plate():
     """Generate realistic California license plate"""
     formats = [
-        f"{random.randint(1,9)}{fake.random_letter().upper()}{fake.random_letter().upper()}{fake.random_letter().upper()}{random.randint(100,999)}",  # 1ABC123
-        f"{random.randint(10,99)}{fake.random_letter().upper()}{fake.random_letter().upper()}{random.randint(100,999)}",  # 12AB123
-        f"{fake.random_letter().upper()}{fake.random_letter().upper()}{fake.random_letter().upper()}{random.randint(1000,9999)}",  # ABC1234
+        f"{random.randint(1,9)}{fake.random_letter().upper()}{fake.random_letter().upper()}{fake.random_letter().upper()}{random.randint(100,999)}", # 1ABC123
+        f"{random.randint(10,99)}{fake.random_letter().upper()}{fake.random_letter().upper()}{random.randint(100,999)}", # 12AB123
+        f"{fake.random_letter().upper()}{fake.random_letter().upper()}{fake.random_letter().upper()}{random.randint(1000,9999)}", # ABC1234
     ]
     return random.choice(formats)
 
 def generate_vin():
     """Generate realistic 17-character VIN"""
-    chars = "ABCDEFGHJKLMNPRSTUVWXYZ1234567890"  # No I, O, Q
+    chars = "ABCDEFGHJKLMNPRSTUVWXYZ1234567890" # No I, O, Q
     return ''.join(random.choice(chars) for _ in range(17))
 
 def create_action_types(db: Session):
@@ -54,16 +53,16 @@ def create_action_types(db: Session):
         if not existing:
             action = ActionType(**action_data)
             db.add(action)
-    
     db.commit()
     print("✅ Action types created")
 
 def create_vehicle_registration_samples(db: Session, count: int = 80):
     """Create realistic California vehicle registration records"""
-    
     # Create different status distributions
     statuses = ["pending"] * 50 + ["approved"] * 20 + ["rejected"] * 10
     random.shuffle(statuses)
+    
+    generated_vins = set()
     
     for i in range(count):
         # Generate realistic data
@@ -72,10 +71,19 @@ def create_vehicle_registration_samples(db: Session, count: int = 80):
         model = fake.word().title() + " " + fake.word().title()
         year = random.randint(2010, 2024)
         
+        # Generate unique VIN
+        vin = generate_vin()
+        while vin in generated_vins:
+            vin = generate_vin()
+        generated_vins.add(vin)
+        
         record = VehicleRegistrationMaster(
+            # ID field now stores VIN
+            id=vin,
+            
             # Basic Information
             license_number=generate_california_license_plate(),
-            vehicle_id_number=generate_vin(),
+            vehicle_id_number=vin,
             registered_owner=fake.name(),
             
             # Address
@@ -113,10 +121,15 @@ def create_vehicle_registration_samples(db: Session, count: int = 80):
         
         # Every 10th record, create an undercover version
         if i % 10 == 0:
+            undercover_vin = generate_vin()
+            while undercover_vin in generated_vins:
+                undercover_vin = generate_vin()
+            generated_vins.add(undercover_vin)
+            
             undercover = VehicleRegistrationUnderCover(
-                master_record_id=None,  # Will be set after master is saved
+                master_record_id=vin,
                 license_number=generate_california_license_plate(),
-                vehicle_id_number=generate_vin(),
+                vehicle_id_number=undercover_vin,
                 registered_owner="CONFIDENTIAL AGENCY",
                 address="[REDACTED]",
                 city=city,
@@ -127,7 +140,7 @@ def create_vehicle_registration_samples(db: Session, count: int = 80):
                 class_type="UNDERCOVER",
                 type_license="Special",
                 expiration_date=fake.date_between(start_date=date.today(), end_date=date.today() + timedelta(days=365)),
-                amount_paid=0.00,  # Often no fee for government vehicles
+                amount_paid=0.00,
                 approval_status="pending",
                 active_status=True
             )
@@ -135,10 +148,15 @@ def create_vehicle_registration_samples(db: Session, count: int = 80):
         
         # Every 15th record, create a fictitious version
         if i % 15 == 0:
+            fictitious_vin = generate_vin()
+            while fictitious_vin in generated_vins:
+                fictitious_vin = generate_vin()
+            generated_vins.add(fictitious_vin)
+            
             fictitious = VehicleRegistrationFictitious(
-                master_record_id=None,  # Will be set after master is saved
+                master_record_id=vin,
                 license_number="FAKE" + str(random.randint(100, 999)),
-                vehicle_id_number="TEST" + generate_vin()[:13],
+                vehicle_id_number=fictitious_vin,
                 registered_owner="TEST USER " + str(i),
                 address=fake.street_address(),
                 city=city,
@@ -161,8 +179,6 @@ def create_vehicle_registration_samples(db: Session, count: int = 80):
 def populate_sample_data(db: Session):
     """Populate database with sample data"""
     print("🚀 Starting sample data generation...")
-    
     create_action_types(db)
     create_vehicle_registration_samples(db, 100)
-    
     print("✅ Sample data generation completed!")

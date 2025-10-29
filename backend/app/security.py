@@ -7,21 +7,19 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.crud import user_crud
+from app.models import user_models
+from app.models.user_models import Role
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 load_dotenv()
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 600 #mins
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 # token funcs
 class TokenData(BaseModel):
@@ -47,7 +45,10 @@ def decode_access_token(token: str) -> Optional[str]:
         return None # invalid token
     return email
 
-async def get_current_user_placeholder(token: str = Depends(oauth2_scheme)):
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db) #injecting the db session
+) -> user_models.User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -55,6 +56,32 @@ async def get_current_user_placeholder(token: str = Depends(oauth2_scheme)):
     )
     email = decode_access_token(token)
     if email is None:
+        #token decoding failed or email wasnt found in token
         raise credentials_exception
-    # Later, we will use this email to fetch the full user object from DB
-    return {"email": email}
+
+    user = user_crud.get_user_by_email(db, email=email)
+    if user is None:
+        #no user matches the email from the token
+        raise credentials_exception
+    if not user.is_active:
+        #deny access to inactive users
+        raise HTTPException(status_code=400, detail="Inactive user")
+
+    #return the SQLAlchemy user obj
+    return user
+
+# func for RBAC
+async def get_current_admin_user(
+    current_user: user_models.User = Depends(get_current_user)
+) -> user_models.User:
+
+    # check if the users roles relationship contains a role named Admin
+    is_admin = any(role.name == "Admin" for role in current_user.roles)
+
+    if not is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, # 403 means "Forbidden", not just "Unauthorized"
+            detail="Operation not permitted: Requires Admin privileges"
+        )
+    # If the check passes, return the user object
+    return current_user

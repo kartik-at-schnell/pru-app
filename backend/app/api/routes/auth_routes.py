@@ -6,15 +6,15 @@ from datetime import timedelta
 from app.database import get_db
 from app.crud import user_crud
 from app.security import (
-    verify_password,
     create_access_token,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
+from app.utils.hash_password import verify_password, hash_password
 from app.schemas import user_schema
 
 router = APIRouter(tags=["Authentication"])
 
-@router.post("/signin", response_model=user_schema.Token)
+@router.post("/login", response_model=user_schema.Token)
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
