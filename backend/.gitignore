@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 
 # Virtual environment
-pru_env/
+pru_venv/
 .env
 
 # Database files (if any)

@@ -2,8 +2,9 @@ from sqlalchemy.orm import Session
 from .. import models 
 from ..schemas import user_schema 
 from app.utils.hash_password import hash_password
+from typing import Optional
 
-def get_user_by_email(db: Session, email: str) -> models.User | None:
+def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
     return db.query(models.User).filter(models.User.email == email).first()
 
 def create_user(db: Session, user: user_schema.UserCreate) -> models.User:
