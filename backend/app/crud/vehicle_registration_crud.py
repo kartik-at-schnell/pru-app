@@ -41,6 +41,7 @@ def get_vehicle_by_id(db: Session, record_id: int):
 def get_all_vehicles(db: Session,
                      skip:int= 0,
                      limit:int = 10,
+                     approval_status: Optional[str] = None,
                      search: Optional[str] = None,
                      record_type: Optional[str]= "master"):
     # decide which table to query based on record_type parameter
@@ -52,6 +53,9 @@ def get_all_vehicles(db: Session,
         model = VehicleRegistrationMaster
 
     query = db.query(model)
+
+    if approval_status:
+        query = query.filter(VehicleRegistrationMaster.approval_status == approval_status)
 
     if search:
         query = query.filter(model.license_number.ilike(f"%{search}"))

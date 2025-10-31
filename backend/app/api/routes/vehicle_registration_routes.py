@@ -52,6 +52,69 @@ def list_vehicles(
         return ApiResponse[List[VehicleRegistrationMaster]](data=vehicle_list)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records {e}")
+    
+# read PENDING
+@router.get("/pending", response_model=ApiResponse[List[VehicleRegistrationMaster]])
+def list_vehicles_pending(
+    skip: int = 0,
+    limit: int = 25,
+    search: Optional[str] = Query(None, description="Search by license number"),
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        vehicle_list = get_all_vehicles(db, skip=skip, limit=limit, search=search, record_type=None, approval_status="pending")
+        return ApiResponse[List[VehicleRegistrationMaster]](data=vehicle_list)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records {e}")
+
+
+# read APPROVED
+@router.get("/approved", response_model=ApiResponse[List[VehicleRegistrationMaster]])
+def list_vehicles_approved(
+    skip: int = 0,
+    limit: int = 25,
+    search: Optional[str] = Query(None, description="Search by license number"),
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        vehicle_list = get_all_vehicles(db, skip=skip, limit=limit, search=search, record_type=None, approval_status="approved")
+        return ApiResponse[List[VehicleRegistrationMaster]](data=vehicle_list)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records {e}")
+
+
+# read REJECTED
+@router.get("/rejected", response_model=ApiResponse[List[VehicleRegistrationMaster]])
+def list_vehicles_rejected(
+    skip: int = 0,
+    limit: int = 25,
+    search: Optional[str] = Query(None, description="Search by license number"),
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        vehicle_list = get_all_vehicles(db, skip=skip, limit=limit, search=search, record_type=None, approval_status="rejected")
+        return ApiResponse[List[VehicleRegistrationMaster]](data=vehicle_list)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records {e}")
+
+
+# read ON HOLD
+@router.get("/on-hold", response_model=ApiResponse[List[VehicleRegistrationMaster]])
+def list_vehicles_on_hold(
+    skip: int = 0,
+    limit: int = 25,
+    search: Optional[str] = Query(None, description="Search by license number"),
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        vehicle_list = get_all_vehicles(db, skip=skip, limit=limit, search=search, record_type=None, approval_status="on_hold")
+        return ApiResponse[List[VehicleRegistrationMaster]](data=vehicle_list)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records {e}")
 
 # Read one
 @router.get("/{record_id}", response_model=ApiResponse[VehicleRegistrationMaster])
