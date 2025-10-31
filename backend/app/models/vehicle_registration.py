@@ -6,7 +6,7 @@ from .base import BaseModel
 class VehicleRegistrationMaster(BaseModel):
     __tablename__ = "vehicle_registration_master"
     
-    id = Column(String(17), primary_key=True, index=True, nullable=False)
+    id = Column(Integer, primary_key=True, index=True, nullable=False)
     license_number = Column(String(20), unique=True, index=True)
     vehicle_id_number = Column(String(20), index=True)
     registered_owner = Column(String(200))
@@ -41,8 +41,6 @@ class VehicleRegistrationMaster(BaseModel):
     error_text = Column(Text)
     
     # relationships with child tables
-    undercover_records = relationship("VehicleRegistrationUnderCover", back_populates="master_record")
-    fictitious_records = relationship("VehicleRegistrationFictitious", back_populates="master_record")
     contacts = relationship("VehicleRegistrationContact", back_populates="master_record")
     reciprocal_issued = relationship("VehicleRegistrationReciprocalIssued", back_populates="master_record")
     reciprocal_received = relationship("VehicleRegistrationReciprocalReceived", back_populates="master_record")
@@ -52,7 +50,7 @@ class VehicleRegistrationUnderCover(BaseModel):
     __tablename__ = "vehicle_registration_undercover"
     
     id = Column(Integer, primary_key=True, index=True)
-    master_record_id = Column(String(17), ForeignKey("vehicle_registration_master.id")) # linking to master table
+    master_record_id = Column(Integer, nullable=True) # linking to master table,optional
     license_number = Column(String(20), unique=True, index=True, nullable=True)
     vehicle_id_number = Column(String(17), index=True)
     registered_owner = Column(String(200), nullable=False)
@@ -81,7 +79,6 @@ class VehicleRegistrationUnderCover(BaseModel):
     error_text = Column(Text)
     
     # relationships
-    master_record = relationship("VehicleRegistrationMaster", back_populates="undercover_records")
     trap_info = relationship("VehicleRegistrationUnderCoverTrapInfo", back_populates="undercover_record")
 
 # fake/placeholder registrations for verification/testing
@@ -90,7 +87,7 @@ class VehicleRegistrationFictitious(BaseModel):
     
     id = Column(Integer, primary_key=True, index=True)
     # link to master record
-    master_record_id = Column(String(17), ForeignKey("vehicle_registration_master.id"))
+    master_record_id = Column(Integer, nullable=True)
     license_number = Column(String(20), index=True, nullable=False)
     vehicle_id_number = Column(String(17), index=True)
     registered_owner = Column(String(200), nullable=False)
@@ -117,7 +114,6 @@ class VehicleRegistrationFictitious(BaseModel):
     error_text = Column(Text)
     
     # relations
-    master_record = relationship("VehicleRegistrationMaster", back_populates="fictitious_records")
     trap_info = relationship("VehicleRegistrationFictitiousTrapInfo", back_populates="fictitious_record")
 
 #other tables
@@ -139,7 +135,7 @@ class VehicleRegistrationContact(BaseModel):
     __tablename__ = "vehicle_registration_contacts"
     
     id = Column(Integer, primary_key=True, index=True)
-    master_record_id = Column(String(17), ForeignKey("vehicle_registration_master.id"))
+    master_record_id = Column(Integer, ForeignKey("vehicle_registration_master.id"))
     contact_name = Column(String(200))
     department = Column(String(100))
     email = Column(String(100))
@@ -155,7 +151,7 @@ class VehicleRegistrationReciprocalReceived(BaseModel):
     __tablename__ = "vehicle_registration_reciprocal_received"
     
     id = Column(Integer, primary_key=True, index=True)
-    master_record_id = Column(String(17), ForeignKey("vehicle_registration_master.id"))
+    master_record_id = Column(Integer, ForeignKey("vehicle_registration_master.id"))
     description = Column(Text)
     license_plate = Column(String(20))
     state = Column(String(50))
@@ -180,7 +176,7 @@ class VehicleRegistrationReciprocalIssued(BaseModel):
     __tablename__ = "vehicle_registration_reciprocal_issued"
     
     id = Column(Integer, primary_key=True, index=True)
-    master_record_id = Column(String(17), ForeignKey("vehicle_registration_master.id"))
+    master_record_id = Column(Integer, ForeignKey("vehicle_registration_master.id"))
     description = Column(Text)
     license_plate = Column(String(20))
     state = Column(String(50))
