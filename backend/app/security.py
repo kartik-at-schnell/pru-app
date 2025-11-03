@@ -1,4 +1,5 @@
 import os
+import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from dotenv import load_dotenv
@@ -20,6 +21,24 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1080 #mins
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+# pre hashing with SHA256 then bcrypt
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def _prehash_password(password: str) -> str:
+
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+
+def hash_password(password: str) -> str:
+    prehashed = _prehash_password(password)
+    return pwd_context.hash(prehashed)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    prehashed = _prehash_password(plain_password)
+    return pwd_context.verify(prehashed, hashed_password)
 
 # token funcs
 class TokenData(BaseModel):
