@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+# from passlib.context import CryptContext
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -22,23 +22,23 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 1080 #mins
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-# pre hashing with SHA256 then bcrypt
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# # pre hashing with SHA256 then bcrypt
+# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def _prehash_password(password: str) -> str:
+# def _prehash_password(password: str) -> str:
 
-    return hashlib.sha256(password.encode('utf-8')).hexdigest()
-
-
-def hash_password(password: str) -> str:
-    prehashed = _prehash_password(password)
-    return pwd_context.hash(prehashed)
+#     return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    prehashed = _prehash_password(plain_password)
-    return pwd_context.verify(prehashed, hashed_password)
+# def hash_password(password: str) -> str:
+#     prehashed = _prehash_password(password)
+#     return pwd_context.hash(prehashed)
+
+
+# def verify_password(plain_password: str, hashed_password: str) -> bool:
+#     prehashed = _prehash_password(plain_password)
+#     return pwd_context.verify(prehashed, hashed_password)
 
 # token funcs
 class TokenData(BaseModel):
