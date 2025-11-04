@@ -82,6 +82,26 @@ def delete_vehicle_record(db:Session, record_id: int):
     db.commit()
     return record
 
+# mark record inactive
+def mark_inactive(db, record_id: int):
+    record = db.query(VehicleRegistrationMaster).get(record_id)
+    if(record):
+        record.active_status = False
+        db.commit()
+        return record
+    
+    return None
+
+#mark active
+def mark_active(db, record_id: int):
+    record = get_vehicle_by_id(db, record_id)
+
+    if(record):
+        record.active_status = True
+        db.commit()
+        return record
+    return None
+
 # function to get all the details for one vehicle
 def get_vehicle_master_details(db: Session, master_id: str):
     query = (

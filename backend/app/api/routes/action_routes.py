@@ -41,7 +41,7 @@ def perform_action(
 
 #history for a specific record
 @router.get("/{record_id}/history", response_model=List[ActionLogOut])
-def get_action_history(record_id: str,
+def get_action_history(record_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(get_current_user)):
     try:
@@ -65,7 +65,7 @@ def get_action_history(record_id: str,
 # convenience endpoints for specific actions (optional but user-friendly)
 #approve endpoint
 @router.post("/{record_id}/approve")
-def approve_record(record_id: str,
+def approve_record(record_id: int,
     request: Request,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(get_current_user)):
@@ -79,7 +79,7 @@ def approve_record(record_id: str,
 
 #reject endpoint
 @router.post("/{record_id}/reject")
-def reject_record(record_id: str,
+def reject_record(record_id: int,
     request: Request,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(get_current_user)):
@@ -93,7 +93,7 @@ def reject_record(record_id: str,
 
 #hold endpoint
 @router.post("/{record_id}/hold")
-def hold_record(record_id: str,
+def hold_record(record_id: int,
     request: Request,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(get_current_user)):

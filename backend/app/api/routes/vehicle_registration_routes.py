@@ -8,7 +8,9 @@ from app.crud.vehicle_registration_crud import (
     get_vehicle_by_id,
     update_vehicle_record,
     delete_vehicle_record,
-    get_vehicle_master_details
+    get_vehicle_master_details,
+    mark_active,
+    mark_inactive
 )
 
 from app.schemas.vehicle_registration_schema import(
@@ -67,7 +69,7 @@ def list_vehicles_pending(
         return ApiResponse[List[VehicleRegistrationMaster]](data=vehicle_list)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records {e}")
-
+    
 
 # read APPROVED
 @router.get("/approved", response_model=ApiResponse[List[VehicleRegistrationMaster]])
@@ -138,6 +140,31 @@ def delete_vehicle(record_id: str, db: Session = Depends(get_db), current_user: 
     if not deleted:
         raise HTTPException(status_code=404, detail="Vehicle record not found")
     return ApiResponse(message=f"Record ID {record_id} deleted successfully")
+
+# mark inactive
+@router.post("/{record_id}/inactive")
+async def mark_inactive_route(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    record = mark_inactive(db, record_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return {"status": "marked inactive", "record_id": record_id}
+
+# mark active
+@router.post("/{record_id}/active")
+async def mark_active_route(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    record = mark_active(db, record_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return {"status": "marked active", "record_id": record_id}
+
 
 # Details endpoint
 @router.get("/{master_id}/details", response_model=ApiResponse[VehicleRegistrationMasterDetails])
