@@ -3,9 +3,18 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import get_db
 from app.crud.vehicle_registration_crud import (
+    create_fictitious,
+    create_undercover,
     create_vehicle_record,
+    get_all_masters_for_dropdown,
     get_all_vehicles,
+    get_fictitious_by_master,
+    get_undercover_by_master,
     get_vehicle_by_id,
+    mark_fictitious_active,
+    mark_fictitious_inactive,
+    mark_undercover_active,
+    mark_undercover_inactive,
     update_vehicle_record,
     delete_vehicle_record,
     get_vehicle_master_details,
@@ -173,3 +182,105 @@ def get_master_record_details(master_id: str, db: Session = Depends(get_db), cur
     if db_record is None:
         raise HTTPException(status_code=404, detail="Vehicle Master Record not found")
     return ApiResponse[VehicleRegistrationMasterDetails](data=db_record)
+
+# new UC FC routes
+
+# get dropdown of masters
+@router.get("/masters/dropdown")
+def get_masters_dropdown(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    masters = get_all_masters_for_dropdown(db)
+    return [{"id": m[0], "vin": m[1], "owner": m[2]} for m in masters]
+
+
+# Undercover
+
+@router.post("/undercover/create")
+def create_uc(
+    master_id: str,
+    uc_data: dict,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    uc = create_undercover(db, master_id, uc_data)
+    return {
+        "status": "created",
+        "uc_id": uc.id,
+        "master_id": uc.master_record_id,
+        "vin": uc.vehicle_id_number
+    }
+
+@router.get("/undercover/master/{master_id}")
+def get_uc_by_master(
+    master_id: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    records = get_undercover_by_master(db, master_id)
+    return {"master_id": master_id, "count": len(records), "records": records}
+
+@router.post("/undercover/{uc_id}/mark-active")
+def mark_uc_active(
+    uc_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    mark_undercover_active(db, uc_id)
+    return {"status": "marked active", "uc_id": uc_id}
+
+@router.post("/undercover/{uc_id}/mark-inactive")
+def mark_uc_inactive(
+    uc_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    mark_undercover_inactive(db, uc_id)
+    return {"status": "marked inactive", "uc_id": uc_id}
+
+
+# Fictitious
+
+@router.post("/fictitious/create")
+def create_fc(
+    master_id: str,
+    fc_data: dict,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    fc = create_fictitious(db, master_id, fc_data)
+    return {
+        "status": "created",
+        "fc_id": fc.id,
+        "master_id": fc.master_record_id,
+        "vin": fc.vehicle_id_number
+    }
+
+@router.get("/fictitious/master/{master_id}")
+def get_fc_by_master(
+    master_id: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    records = get_fictitious_by_master(db, master_id)
+    return {"master_id": master_id, "count": len(records), "records": records}
+
+@router.post("/fictitious/{fc_id}/mark-active")
+def mark_fc_active(
+    fc_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    mark_fictitious_active(db, fc_id)
+    return {"status": "marked active", "fc_id": fc_id}
+
+@router.post("/fictitious/{fc_id}/mark-inactive")
+def mark_fc_inactive(
+    fc_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    mark_fictitious_inactive(db, fc_id)
+    return {"status": "marked inactive", "fc_id": fc_id}
+

@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from app.models import (
@@ -118,3 +119,134 @@ def get_vehicle_master_details(db: Session, master_id: str):
         )
     )
     return query.first()
+
+#helper function to validate master exists and return it
+def get_master_by_id(db: Session, master_id: str):
+    master = db.query(VehicleRegistrationMaster).filter(
+        VehicleRegistrationMaster.id == master_id
+    ).first()
+    if not master:
+        raise HTTPException(status_code=404, detail=f"Master record {master_id} not found")
+    return master
+
+#dropdown to get all master ids
+def get_all_masters_for_dropdown(db: Session):
+    return db.query(
+        VehicleRegistrationMaster.id, 
+        VehicleRegistrationMaster.vehicle_id_number,
+        VehicleRegistrationMaster.registered_owner
+    ).filter(
+        VehicleRegistrationMaster.active_status == True  # Only active masters
+    ).all()
+
+# create uc with masters , auto-fetched
+
+def create_undercover(db: Session, master_id: str, uc_data: dict):
+    # get master
+    master = get_master_by_id(db, master_id)
+    
+    # create UC with auto-fetched VIN
+    uc_dict = {
+        'master_record_id': master_id,
+        'vehicle_id_number': master.vehicle_id_number,  # auto-fetch VIN
+    }
+    
+    # add user-provided fields(user can override auto-fetched values)
+    for field, value in uc_data.items():
+        if value is not None:  # only if user provided a value
+            uc_dict[field] = value
+        else:
+            if hasattr(master, field):
+                uc_dict[field] = getattr(master, field)
+    
+    # create UC object
+    uc = VehicleRegistrationUnderCover(**uc_dict)
+    db.add(uc)
+    db.commit()
+    db.refresh(uc)
+    return uc
+
+# create fc
+
+def create_fictitious(db: Session, master_id: str, fc_data: dict):
+    """
+    Create FC record:
+    1. Validate master exists
+    2. Auto-fetch master's VIN
+    3. Use provided values, fallback to master values if None
+    """
+    # get master
+    master = get_master_by_id(db, master_id)
+    
+    # create FC with auto-fetched VIN
+    fc_dict = {
+        'master_record_id': master_id,
+        'vehicle_id_number': master.vehicle_id_number,  # auto-fetch VIN
+    }
+    
+    # add user-provided fields(user can override auto-fetched values)
+    for field, value in fc_data.items():
+        if value is not None:  # only if user provided a value
+            fc_dict[field] = value
+        else:  # if user didnt provide, use masters value
+            if hasattr(master, field):
+                fc_dict[field] = getattr(master, field)
+    
+    # create FC object
+    fc = VehicleRegistrationFictitious(**fc_dict)
+    db.add(fc)
+    db.commit()
+    db.refresh(fc)
+    return fc
+
+# get uc/fc for a master record
+
+def get_undercover_by_master(db: Session, master_id: str):
+    """Get all UC records for a specific Master"""
+    get_master_by_id(db, master_id)  # Verify master exists
+    return db.query(VehicleRegistrationUnderCover).filter(
+        VehicleRegistrationUnderCover.master_record_id == master_id
+    ).all()
+
+# get all FC records for a specific master
+def get_fictitious_by_master(db: Session, master_id: str):
+    get_master_by_id(db, master_id)  # verify master exists
+    return db.query(VehicleRegistrationFictitious).filter(
+        VehicleRegistrationFictitious.master_record_id == master_id
+    ).all()
+
+#mark uc or fc as active/inactive
+
+def mark_undercover_active(db: Session, uc_id: int):
+    """Mark UC as active"""
+    uc = db.query(VehicleRegistrationUnderCover).get(uc_id)
+    if not uc:
+        raise HTTPException(status_code=404, detail="UC record not found")
+    uc.active_status = True
+    db.commit()
+    return uc
+
+def mark_undercover_inactive(db: Session, uc_id: int):
+    """Mark UC as inactive"""
+    uc = db.query(VehicleRegistrationUnderCover).get(uc_id)
+    if not uc:
+        raise HTTPException(status_code=404, detail="UC record not found")
+    uc.active_status = False
+    db.commit()
+    return uc
+
+def mark_fictitious_active(db: Session, fc_id: int):
+    fc = db.query(VehicleRegistrationFictitious).get(fc_id)
+    if not fc:
+        raise HTTPException(status_code=404, detail="FC record not found")
+    fc.active_status = True
+    db.commit()
+    return fc
+
+def mark_fictitious_inactive(db: Session, fc_id: int):
+    fc = db.query(VehicleRegistrationFictitious).get(fc_id)
+    if not fc:
+        raise HTTPException(status_code=404, detail="FC record not found")
+    fc.active_status = False
+    db.commit()
+    return fc

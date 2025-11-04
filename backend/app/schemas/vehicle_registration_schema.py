@@ -208,3 +208,68 @@ class VehicleRegistrationUnderCoverTrapInfoCreateBody(BaseModel):
 class VehicleRegistrationFictitiousTrapInfoCreateBody(BaseModel):
     date: Optional[datetime] = None
     number: Optional[str] = None
+
+# new schemas
+
+class UnderCoverCreateRequest(BaseModel):
+    master_record_id: str  # user selects from dropdown
+    
+    # user can override any of these
+    license_number: Optional[str] = None
+    registered_owner: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    make: Optional[str] = None
+    model: Optional[str] = None
+    year_model: Optional[int] = None
+    body_type: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class FictitiousCreateRequest(BaseModel):
+    master_record_id: str  # user selects from dropdown
+    
+    # user can override any of these(or leave None to use masters values)
+    license_number: Optional[str] = None
+    registered_owner: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    make: Optional[str] = None
+    model: Optional[str] = None
+    year_model: Optional[int] = None
+    body_type: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class MasterDropdownResponse(BaseModel):
+    id: str
+    vehicle_id_number: str
+    registered_owner: str
+
+class UnderCoverResponse(BaseModel):
+    id: int
+    master_record_id: str
+    vehicle_id_number: str
+    license_number: Optional[str]
+    registered_owner: Optional[str]
+    active_status: bool
+    
+    class Config:
+        from_attributes = True
+
+class FictitiousResponse(BaseModel):
+    id: int
+    master_record_id: str
+    vehicle_id_number: str  # auto-fetched from master
+    license_number: Optional[str]
+    registered_owner: Optional[str]
+    active_status: bool
+    
+    class Config:
+        from_attributes = True
