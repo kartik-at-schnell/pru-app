@@ -142,13 +142,13 @@ def update_vehicle(record_id: str, update_data: VehicleRegistrationMasterBase, d
         raise HTTPException(status_code=404, detail="Vehicle record not found")
     return ApiResponse[VehicleRegistrationMaster](data=updated, message="Record updated successfully")
 
-# delete
-@router.delete("/{record_id}", response_model=ApiResponse)
-def delete_vehicle(record_id: str, db: Session = Depends(get_db), current_user: user_models.User = Depends(get_current_user)):
-    deleted = delete_vehicle_record(db, record_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Vehicle record not found")
-    return ApiResponse(message=f"Record ID {record_id} deleted successfully")
+# # delete
+# @router.delete("/{record_id}", response_model=ApiResponse)
+# def delete_vehicle(record_id: str, db: Session = Depends(get_db), current_user: user_models.User = Depends(get_current_user)):
+#     deleted = delete_vehicle_record(db, record_id)
+#     if not deleted:
+#         raise HTTPException(status_code=404, detail="Vehicle record not found")
+#     return ApiResponse(message=f"Record ID {record_id} deleted successfully")
 
 # mark inactive
 @router.post("/{record_id}/inactive")

@@ -6,6 +6,10 @@ __pycache__/
 pru_venv/
 .env
 
+#populate db
+populate_db.py
+sample_data.py
+
 # Database files (if any)
 *.db
 
