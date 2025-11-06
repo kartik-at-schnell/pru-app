@@ -273,3 +273,20 @@ class FictitiousResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+# bulk operations request schema
+class BulkActionRequest(BaseModel):
+    record_ids: List[int]  # Array of Master record primary keys
+    
+    class Config:
+        from_attributes = True
+
+class BulkActionResponse(BaseModel):
+    success_count: int
+    failed_count: int
+    failed_ids: List[int] = []
+    message: str
+    
+    class Config:
+        from_attributes = True
+

@@ -19,7 +19,13 @@ from app.crud.vehicle_registration_crud import (
     delete_vehicle_record,
     get_vehicle_master_details,
     mark_active,
-    mark_inactive
+    mark_inactive,
+    bulk_approve,
+    bulk_reject,
+    bulk_set_on_hold,
+    bulk_activate,
+    bulk_deactivate,
+    bulk_delete
 )
 
 from app.schemas.vehicle_registration_schema import(
@@ -27,6 +33,8 @@ from app.schemas.vehicle_registration_schema import(
     VehicleRegistrationMasterBase,
     VehicleRegistrationMaster,
     VehicleRegistrationMasterDetails,
+    BulkActionRequest,
+    BulkActionResponse
 )
 from app.security import get_current_user
 
@@ -128,13 +136,14 @@ def list_vehicles_on_hold(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records {e}")
 
 # Read one
-@router.get("/{record_id}", response_model=ApiResponse[VehicleRegistrationMaster])
-def get_vehicle(record_id: str, db: Session = Depends(get_db), current_user: user_models.User = Depends(get_current_user)):
-    record = get_vehicle_by_id(db, record_id)
-    if not record:
-        raise HTTPException(status_code=404, detail="Vehicle record not found")
-    return ApiResponse[VehicleRegistrationMaster](data=record)
+# @router.get("/{record_id}", response_model=ApiResponse[VehicleRegistrationMaster])
+# def get_vehicle(record_id: str, db: Session = Depends(get_db), current_user: user_models.User = Depends(get_current_user)):
+#     record = get_vehicle_by_id(db, record_id)
+#     if not record:
+#         raise HTTPException(status_code=404, detail="Vehicle record not found")
+#     return ApiResponse[VehicleRegistrationMaster](data=record)
 
+#update
 @router.put("/{record_id}", response_model=ApiResponse[VehicleRegistrationMaster])
 def update_vehicle(record_id: str, update_data: VehicleRegistrationMasterBase, db: Session = Depends(get_db), current_user: user_models.User = Depends(get_current_user)):
     updated = update_vehicle_record(db, record_id, update_data)
@@ -212,32 +221,32 @@ def create_uc(
         "vin": uc.vehicle_id_number
     }
 
-@router.get("/undercover/master/{master_id}")
-def get_uc_by_master(
-    master_id: str,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    records = get_undercover_by_master(db, master_id)
-    return {"master_id": master_id, "count": len(records), "records": records}
+# @router.get("/undercover/master/{master_id}")
+# def get_uc_by_master(
+#     master_id: str,
+#     db: Session = Depends(get_db),
+#     current_user = Depends(get_current_user)
+# ):
+#     records = get_undercover_by_master(db, master_id)
+#     return {"master_id": master_id, "count": len(records), "records": records}
 
-@router.post("/undercover/{uc_id}/mark-active")
-def mark_uc_active(
-    uc_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    mark_undercover_active(db, uc_id)
-    return {"status": "marked active", "uc_id": uc_id}
+# @router.post("/undercover/{uc_id}/mark-active")
+# def mark_uc_active(
+#     uc_id: int,
+#     db: Session = Depends(get_db),
+#     current_user = Depends(get_current_user)
+# ):
+#     mark_undercover_active(db, uc_id)
+#     return {"status": "marked active", "uc_id": uc_id}
 
-@router.post("/undercover/{uc_id}/mark-inactive")
-def mark_uc_inactive(
-    uc_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    mark_undercover_inactive(db, uc_id)
-    return {"status": "marked inactive", "uc_id": uc_id}
+# @router.post("/undercover/{uc_id}/mark-inactive")
+# def mark_uc_inactive(
+#     uc_id: int,
+#     db: Session = Depends(get_db),
+#     current_user = Depends(get_current_user)
+# ):
+#     mark_undercover_inactive(db, uc_id)
+#     return {"status": "marked inactive", "uc_id": uc_id}
 
 
 # Fictitious
@@ -257,30 +266,128 @@ def create_fc(
         "vin": fc.vehicle_id_number
     }
 
-@router.get("/fictitious/master/{master_id}")
-def get_fc_by_master(
-    master_id: str,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    records = get_fictitious_by_master(db, master_id)
-    return {"master_id": master_id, "count": len(records), "records": records}
+# @router.get("/fictitious/master/{master_id}")
+# def get_fc_by_master(
+#     master_id: str,
+#     db: Session = Depends(get_db),
+#     current_user = Depends(get_current_user)
+# ):
+#     records = get_fictitious_by_master(db, master_id)
+#     return {"master_id": master_id, "count": len(records), "records": records}
 
-@router.post("/fictitious/{fc_id}/mark-active")
-def mark_fc_active(
-    fc_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    mark_fictitious_active(db, fc_id)
-    return {"status": "marked active", "fc_id": fc_id}
+# @router.post("/fictitious/{fc_id}/mark-active")
+# def mark_fc_active(
+#     fc_id: int,
+#     db: Session = Depends(get_db),
+#     current_user = Depends(get_current_user)
+# ):
+#     mark_fictitious_active(db, fc_id)
+#     return {"status": "marked active", "fc_id": fc_id}
 
-@router.post("/fictitious/{fc_id}/mark-inactive")
-def mark_fc_inactive(
-    fc_id: int,
+# @router.post("/fictitious/{fc_id}/mark-inactive")
+# def mark_fc_inactive(
+#     fc_id: int,
+#     db: Session = Depends(get_db),
+#     current_user = Depends(get_current_user)
+# ):
+#     mark_fictitious_inactive(db, fc_id)
+#     return {"status": "marked inactive", "fc_id": fc_id}
+
+# bulk actions routes
+
+#bulk approve
+@router.post("/bulk-approve", response_model=ApiResponse[BulkActionResponse])
+def bulk_approve_route(
+    request: BulkActionRequest,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: user_models.User = Depends(get_current_user)
 ):
-    mark_fictitious_inactive(db, fc_id)
-    return {"status": "marked inactive", "fc_id": fc_id}
+    updated_count = bulk_approve(db, request.record_ids)
+    
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully approved {updated_count} records"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
+
+# bulk reject
+@router.post("/bulk-reject", response_model=ApiResponse[BulkActionResponse])
+def bulk_reject_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    updated_count = bulk_reject(db, request.record_ids)
+    
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully rejected {updated_count} records"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
+
+# bulk on-hold
+@router.post("/bulk-on-hold", response_model=ApiResponse[BulkActionResponse])
+def bulk_on_hold_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    updated_count = bulk_set_on_hold(db, request.record_ids)
+    
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully set {updated_count} records to on-hold"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
+
+#bulk flag active
+@router.post("/bulk-activate", response_model=ApiResponse[BulkActionResponse])
+def bulk_activate_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    updated_count = bulk_activate(db, request.record_ids)
+    
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully activated {updated_count} records"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
+
+ # bulk flag inactive
+@router.post("/bulk-deactivate", response_model=ApiResponse[BulkActionResponse])
+def bulk_deactivate_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    updated_count = bulk_deactivate(db, request.record_ids)
+    
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully deactivated {updated_count} records"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
+
+# bulk delete
+@router.delete("/bulk-delete", response_model=ApiResponse[BulkActionResponse])
+def bulk_delete_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    deleted_count = bulk_delete(db, request.record_ids)
+    
+    response_data = BulkActionResponse(
+        success_count=deleted_count,
+        failed_count=len(request.record_ids) - deleted_count,
+        message=f"Successfully deleted {deleted_count} records"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
 

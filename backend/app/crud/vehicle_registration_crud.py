@@ -250,3 +250,98 @@ def mark_fictitious_inactive(db: Session, fc_id: int):
     fc.active_status = False
     db.commit()
     return fc
+
+# bulk ops
+
+# bulk approve
+def bulk_approve(db: Session, record_ids: List[int]):
+    try:
+        updated_count = db.query(VehicleRegistrationMaster).filter(
+            VehicleRegistrationMaster.id.in_(record_ids),
+            VehicleRegistrationMaster.approval_status != "approved"
+        ).update(
+            {"approval_status": "approved"},
+            synchronize_session=False
+        )
+        db.commit()
+        return updated_count
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Bulk approve failed: {str(e)}")
+
+# bulk reject
+def bulk_reject(db: Session, record_ids: List[int]):
+    try:
+        updated_count = db.query(VehicleRegistrationMaster).filter(
+            VehicleRegistrationMaster.id.in_(record_ids),
+            VehicleRegistrationMaster.approval_status != "rejected"
+        ).update(
+            {"approval_status": "rejected"},
+            synchronize_session=False
+        )
+        db.commit()
+        return updated_count
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Bulk reject failed: {str(e)}")
+
+# bulk onhold
+def bulk_set_on_hold(db: Session, record_ids: List[int]):
+    try:
+        updated_count = db.query(VehicleRegistrationMaster).filter(
+            VehicleRegistrationMaster.id.in_(record_ids),
+            VehicleRegistrationMaster.approval_status != "on_hold"
+        ).update(
+            {"approval_status": "on_hold"},
+            synchronize_session=False
+        )
+        db.commit()
+        return updated_count
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Bulk on-hold failed: {str(e)}")
+
+#flag rcords active in bulk 
+def bulk_activate(db: Session, record_ids: List[int]):
+    try:
+        updated_count = db.query(VehicleRegistrationMaster).filter(
+            VehicleRegistrationMaster.id.in_(record_ids),
+            VehicleRegistrationMaster.active_status == False
+        ).update(
+            {"active_status": True},
+            synchronize_session=False
+        )
+        db.commit()
+        return updated_count
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Bulk activate failed: {str(e)}")
+
+#flag multiple records inactive
+def bulk_deactivate(db: Session, record_ids: List[int]):
+    try:
+        updated_count = db.query(VehicleRegistrationMaster).filter(
+            VehicleRegistrationMaster.id.in_(record_ids),
+            VehicleRegistrationMaster.active_status == True
+        ).update(
+            {"active_status": False},
+            synchronize_session=False
+        )
+        db.commit()
+        return updated_count
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Bulk deactivate failed: {str(e)}")
+
+# bulk delete 
+def bulk_delete(db: Session, record_ids: List[int]):
+    try:
+        deleted_count = db.query(VehicleRegistrationMaster).filter(
+            VehicleRegistrationMaster.id.in_(record_ids)
+        ).delete(synchronize_session=False)
+        db.commit()
+        return deleted_count
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Bulk delete failed: {str(e)}")
+
