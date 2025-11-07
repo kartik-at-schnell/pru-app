@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import get_db
+from app.models.vehicle_registration import VehicleRegistrationMaster
+
 from app.crud.vehicle_registration_crud import (
     create_fictitious,
     create_undercover,
@@ -29,6 +31,8 @@ from app.crud.vehicle_registration_crud import (
 )
 
 from app.schemas.vehicle_registration_schema import(
+    FictitiousCreateRequest,
+    UnderCoverCreateRequest,
     VehicleRegistrationFictitious,
     VehicleRegistrationFictitiousResponse,
     VehicleRegistrationMasterCreate,
@@ -220,18 +224,30 @@ def get_masters_dropdown(
 # Undercover
 
 @router.post("/undercover/create")
-def create_uc(
-    master_id: str,
-    uc_data: dict,
+def create_undercover_route(
+    payload: UnderCoverCreateRequest,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    uc = create_undercover(db, master_id, uc_data)
+    master = db.query(VehicleRegistrationMaster).filter_by(id=payload.master_record_id).first()
+    if not master:
+        raise HTTPException(status_code=404, detail="Master record not found")
+
+    uc = VehicleRegistrationUnderCover(
+        master_record_id=master.id,
+        vehicle_id_number=master.vehicle_id_number,
+        **payload.model_dump(exclude={"master_record_id"})
+    )
+
+    db.add(uc)
+    db.commit()
+    db.refresh(uc)
+
     return {
-        "status": "created",
-        "uc_id": uc.id,
-        "master_id": uc.master_record_id,
-        "vin": uc.vehicle_id_number
+        "id": uc.id,
+        "license_number": uc.license_number,
+        "vehicle_id_number": uc.vehicle_id_number,
+        "master_id": uc.master_record_id
     }
 
 # @router.get("/undercover/master/{master_id}")
@@ -265,19 +281,31 @@ def create_uc(
 # Fictitious
 
 @router.post("/fictitious/create")
-def create_fc(
-    master_id: str,
-    fc_data: dict,
+def create_fictitious_route(
+    payload: FictitiousCreateRequest,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    fc = create_fictitious(db, master_id, fc_data)
+    master = db.query(VehicleRegistrationMaster).filter_by(id=payload.master_record_id).first()
+    if not master:
+        raise HTTPException(status_code=404, detail="Master record not found")
+
+    fc = VehicleRegistrationFictitious(
+        master_record_id=master.id,
+        vehicle_id_number=master.vehicle_id_number,
+        **payload.model_dump(exclude={"master_record_id"})
+    )
+
+    db.add(fc)
+    db.commit()
+    db.refresh(fc)
     return {
-        "status": "created",
-        "fc_id": fc.id,
-        "master_id": fc.master_record_id,
-        "vin": fc.vehicle_id_number
+        "id": fc.id,
+        "license_number": fc.license_number,
+        "vehicle_id_number": fc.vehicle_id_number,
+        "master_id": fc.master_record_id
     }
+
 
 # @router.get("/fictitious/master/{master_id}")
 # def get_fc_by_master(

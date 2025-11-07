@@ -16,6 +16,7 @@ from app.schemas.vehicle_registration_schema import(
     VehicleRegistrationMasterCreate,
     VehicleRegistrationMasterBase
 )
+from ..models.base import BaseModel
 
 def create_vehicle_record(db:Session, record_data: VehicleRegistrationMasterCreate, record_type: Optional[str] = "master"):
 
@@ -63,16 +64,27 @@ def get_all_vehicles(db: Session,
     return query.offset(skip).limit(limit).all()
 
 # update
-def update_vehicle_record(db:Session, record_id: int, update_data: VehicleRegistrationMasterBase):
-    record = get_vehicle_by_id(db, record_id)
+def update_vehicle_record(db: Session, record_id: int, update_data: BaseModel, record_type: str = "master"):
+
+    if record_type == "undercover":
+        model = VehicleRegistrationUnderCover
+    elif record_type == "fictitious":
+        model = VehicleRegistrationFictitious
+    else:
+        model = VehicleRegistrationMaster
+
+    record = db.query(model).filter(model.id == record_id).first()
     if not record:
         return None
-    for key, value in update_data.model_dump(exclude_unset = True).items():
-        setattr(record, key, value)
-    db.add(record)
+
+    for key, value in update_data.model_dump(exclude_unset=True).items():
+        if hasattr(record, key):
+            setattr(record, key, value)
+
     db.commit()
     db.refresh(record)
     return record
+
 
 #delete
 def delete_vehicle_record(db:Session, record_id: int):

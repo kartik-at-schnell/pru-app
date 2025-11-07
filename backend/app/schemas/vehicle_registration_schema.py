@@ -212,38 +212,45 @@ class VehicleRegistrationFictitiousTrapInfoCreateBody(BaseModel):
 # new schemas
 
 class UnderCoverCreateRequest(BaseModel):
-    master_record_id: str  # user selects from dropdown
-    
-    # user can override any of these
-    license_number: Optional[str] = None
-    registered_owner: Optional[str] = None
-    address: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
-    zip_code: Optional[str] = None
-    make: Optional[str] = None
-    model: Optional[str] = None
-    year_model: Optional[int] = None
-    body_type: Optional[str] = None
+    master_record_id: int
+    license_number: str
+    registered_owner: str
+    address: str
+    city: str
+    state: str
+    zip_code: str
+    make: str
+    year_model: int
+    class_type: str
+    type_license: str
+    expiration_date: date
+    date_issued: date
+    date_fee_received: date
+    amount_paid: float
+    active_status: bool = True
+
+
     
     class Config:
         from_attributes = True
 
 class FictitiousCreateRequest(BaseModel):
-    master_record_id: str  # user selects from dropdown
-    
-    # user can override any of these(or leave None to use masters values)
-    license_number: Optional[str] = None
-    registered_owner: Optional[str] = None
-    address: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
-    zip_code: Optional[str] = None
-    make: Optional[str] = None
-    model: Optional[str] = None
-    year_model: Optional[int] = None
-    body_type: Optional[str] = None
-    
+    master_record_id: str
+
+    license_number: str
+    registered_owner: str
+    address: str
+    city: str
+    state: str
+    zip_code: str
+    make: str
+    model: str
+    year_model: int
+    vlp_class: str
+    amount_due: float
+    amount_received: float
+    active_status: bool = True
+
     class Config:
         from_attributes = True
 
