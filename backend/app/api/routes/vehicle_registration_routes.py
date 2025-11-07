@@ -29,12 +29,17 @@ from app.crud.vehicle_registration_crud import (
 )
 
 from app.schemas.vehicle_registration_schema import(
+    VehicleRegistrationFictitious,
+    VehicleRegistrationFictitiousResponse,
     VehicleRegistrationMasterCreate,
     VehicleRegistrationMasterBase,
     VehicleRegistrationMaster,
     VehicleRegistrationMasterDetails,
     BulkActionRequest,
-    BulkActionResponse
+    BulkActionResponse,
+    VehicleRegistrationMasterResponse,
+    VehicleRegistrationUnderCover,
+    VehicleRegistrationUnderCoverResponse
 )
 from app.security import get_current_user
 
@@ -57,7 +62,7 @@ def create_vehicle(record: VehicleRegistrationMasterCreate,
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to create record: {e}")
 
 # Read all
-@router.get("/", response_model=ApiResponse[List[VehicleRegistrationMaster]])
+@router.get("/")
 def list_vehicles(
     skip: int = 0,
     limit: int = 25,
@@ -68,7 +73,15 @@ def list_vehicles(
 ):
     try:
         vehicle_list = get_all_vehicles(db, skip=skip, limit=limit, search=search, record_type=record_type)
-        return ApiResponse[List[VehicleRegistrationMaster]](data=vehicle_list)
+
+        if record_type == "undercover":
+            data = [VehicleRegistrationUnderCoverResponse.model_validate(v) for v in vehicle_list]
+        elif record_type == "fictitious":
+            data = [VehicleRegistrationFictitiousResponse.model_validate(v) for v in vehicle_list]
+        else:
+            data = [VehicleRegistrationMasterResponse.model_validate(v) for v in vehicle_list]
+            
+        return ApiResponse[List[type(data[0])]](data=data)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records {e}")
     

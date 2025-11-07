@@ -290,3 +290,37 @@ class BulkActionResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class VehicleRegistrationResponse(BaseModel):
+    id: int
+    license_number: str
+    parent: str = Field(default="Vehicle Registration")
+    key: str = Field(alias="vehicle_id_number")    
+    vehicle_type: Optional[str] = Field(default=None, alias="type_vehicle")
+    owner_name: Optional[str] = Field(default=None, alias="registered_owner")
+    active_status: bool = True
+    
+    class Config:
+        from_attributes = True
+        populate_by_name = True  
+
+class VehicleRegistrationMasterResponse(VehicleRegistrationResponse):
+    approval_status: Optional[str] = None
+    list: str = Field(default="Master Record")
+    
+    class Config:
+        from_attributes = True
+
+# uc response
+class VehicleRegistrationUnderCoverResponse(VehicleRegistrationResponse):
+    list: str = Field(default="Undercover Record")
+    
+    class Config:
+        from_attributes = True
+
+
+# fc response
+class VehicleRegistrationFictitiousResponse(VehicleRegistrationResponse):
+    list: str = Field(default="Fictitious Record")
+    class Config:
+        from_attributes = True
+
