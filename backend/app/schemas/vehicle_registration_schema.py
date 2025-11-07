@@ -313,6 +313,7 @@ class VehicleRegistrationMasterResponse(VehicleRegistrationResponse):
 # uc response
 class VehicleRegistrationUnderCoverResponse(VehicleRegistrationResponse):
     list: str = Field(default="Undercover Record")
+    master_record_id : Optional[int] = None
     
     class Config:
         from_attributes = True
@@ -321,6 +322,7 @@ class VehicleRegistrationUnderCoverResponse(VehicleRegistrationResponse):
 # fc response
 class VehicleRegistrationFictitiousResponse(VehicleRegistrationResponse):
     list: str = Field(default="Fictitious Record")
+    master_record_id : Optional[int] = None
     class Config:
         from_attributes = True
 
