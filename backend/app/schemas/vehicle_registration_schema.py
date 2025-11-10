@@ -211,48 +211,41 @@ class VehicleRegistrationFictitiousTrapInfoCreateBody(BaseModel):
 
 # new schemas
 
-class UnderCoverCreateRequest(BaseModel):
-    master_record_id: int
+#schemas for creating new records
+class BaseVehicleRegistrationCreate(BaseModel):
     license_number: str
     registered_owner: str
+    vehicle_id_number: Optional[str] = None
     address: str
     city: str
     state: str
     zip_code: str
     make: str
     year_model: int
+    active_status: bool = True
+
+class MasterCreateRequest(BaseVehicleRegistrationCreate):
+    model: str
+    body_type: str
+    type_license: str
+    type_vehicle: str
+
+class UnderCoverCreateRequest(BaseVehicleRegistrationCreate):
+    master_record_id: int
     class_type: str
     type_license: str
     expiration_date: date
     date_issued: date
     date_fee_received: date
     amount_paid: float
-    active_status: bool = True
 
-
-    
-    class Config:
-        from_attributes = True
-
-class FictitiousCreateRequest(BaseModel):
-    master_record_id: str
-
-    license_number: str
-    registered_owner: str
-    address: str
-    city: str
-    state: str
-    zip_code: str
-    make: str
+class FictitiousCreateRequest(BaseVehicleRegistrationCreate):
+    master_record_id: int
     model: str
-    year_model: int
     vlp_class: str
     amount_due: float
     amount_received: float
-    active_status: bool = True
 
-    class Config:
-        from_attributes = True
 
 class MasterDropdownResponse(BaseModel):
     id: str

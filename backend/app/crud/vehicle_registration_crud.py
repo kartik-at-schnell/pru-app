@@ -13,25 +13,102 @@ from app.models import (
 )
 
 from app.schemas.vehicle_registration_schema import(
+    FictitiousCreateRequest,
+    MasterCreateRequest,
+    UnderCoverCreateRequest,
     VehicleRegistrationMasterCreate,
     VehicleRegistrationMasterBase
 )
 from ..models.base import BaseModel
 
-def create_vehicle_record(db:Session, record_data: VehicleRegistrationMasterCreate, record_type: Optional[str] = "master"):
+#Create records
 
-    if record_type == "undercover":
-        model_class = VehicleRegistrationUnderCover
-    elif record_type == "fictitious":
-        model_class = VehicleRegistrationFictitious
-    else:  # default master
-        model_class = VehicleRegistrationMaster
-
-    new_record = model_class(**record_data.model_dump())
-    db.add(new_record)
+def create_master_record(db, payload: MasterCreateRequest):
+    master = VehicleRegistrationMaster(
+        license_number=payload.license_number,
+        vehicle_id_number=payload.vehicle_id_number,
+        registered_owner=payload.registered_owner,
+        address=payload.address,
+        city=payload.city,
+        state=payload.state,
+        zip_code=payload.zip_code,
+        make=payload.make,
+        model=payload.model,
+        year_model=payload.year_model,
+        body_type=payload.body_type,
+        type_license=payload.type_license,
+        type_vehicle=payload.type_vehicle,
+        active_status=payload.active_status
+    )
+    db.add(master)
     db.commit()
-    db.refresh(new_record)
-    return new_record
+    db.refresh(master)
+    return master
+
+def create_undercover_record(db, payload: UnderCoverCreateRequest):
+    master = db.query(VehicleRegistrationMaster).filter_by(id=payload.master_record_id).first()
+    if not master:
+        raise HTTPException(status_code=404, detail="Master record not found")
+
+    # VIN logic
+    vin = payload.vehicle_id_number or master.vehicle_id_number
+    if payload.vehicle_id_number and payload.vehicle_id_number != master.vehicle_id_number:
+        raise HTTPException(status_code=400, detail="Provided VIN does not match master record")
+
+    record = VehicleRegistrationUnderCover(
+        master_record_id=master.id,
+        vehicle_id_number=vin,
+        license_number=payload.license_number,
+        registered_owner=payload.registered_owner,
+        address=payload.address,
+        city=payload.city,
+        state=payload.state,
+        zip_code=payload.zip_code,
+        make=payload.make,
+        year_model=payload.year_model,
+        class_type=payload.class_type,
+        type_license=payload.type_license,
+        expiration_date=payload.expiration_date,
+        date_issued=payload.date_issued,
+        date_fee_received=payload.date_fee_received,
+        amount_paid=payload.amount_paid,
+        active_status=payload.active_status
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+def create_fictitious_record(db, payload: FictitiousCreateRequest):
+    master = db.query(VehicleRegistrationMaster).filter_by(id=payload.master_record_id).first()
+    if not master:
+        raise HTTPException(status_code=404, detail="Master record not found")
+
+    vin = payload.vehicle_id_number or master.vehicle_id_number
+    if payload.vehicle_id_number and payload.vehicle_id_number != master.vehicle_id_number:
+        raise HTTPException(status_code=400, detail="Provided VIN does not match master record")
+
+    record = VehicleRegistrationFictitious(
+        master_record_id=master.id,
+        vehicle_id_number=vin,
+        license_number=payload.license_number,
+        registered_owner=payload.registered_owner,
+        address=payload.address,
+        city=payload.city,
+        state=payload.state,
+        zip_code=payload.zip_code,
+        make=payload.make,
+        model=payload.model,
+        year_model=payload.year_model,
+        vlp_class=payload.vlp_class,
+        amount_due=payload.amount_due,
+        amount_received=payload.amount_received,
+        active_status=payload.active_status
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
 
 #read op
 
@@ -150,66 +227,6 @@ def get_all_masters_for_dropdown(db: Session):
     ).filter(
         VehicleRegistrationMaster.active_status == True  # Only active masters
     ).all()
-
-# create uc with masters , auto-fetched
-
-def create_undercover(db: Session, master_id: str, uc_data: dict):
-    # get master
-    master = get_master_by_id(db, master_id)
-    
-    # create UC with auto-fetched VIN
-    uc_dict = {
-        'master_record_id': master_id,
-        'vehicle_id_number': master.vehicle_id_number,  # auto-fetch VIN
-    }
-    
-    # add user-provided fields(user can override auto-fetched values)
-    for field, value in uc_data.items():
-        if value is not None:  # only if user provided a value
-            uc_dict[field] = value
-        else:
-            if hasattr(master, field):
-                uc_dict[field] = getattr(master, field)
-    
-    # create UC object
-    uc = VehicleRegistrationUnderCover(**uc_dict)
-    db.add(uc)
-    db.commit()
-    db.refresh(uc)
-    return uc
-
-# create fc
-
-def create_fictitious(db: Session, master_id: str, fc_data: dict):
-    """
-    Create FC record:
-    1. Validate master exists
-    2. Auto-fetch master's VIN
-    3. Use provided values, fallback to master values if None
-    """
-    # get master
-    master = get_master_by_id(db, master_id)
-    
-    # create FC with auto-fetched VIN
-    fc_dict = {
-        'master_record_id': master_id,
-        'vehicle_id_number': master.vehicle_id_number,  # auto-fetch VIN
-    }
-    
-    # add user-provided fields(user can override auto-fetched values)
-    for field, value in fc_data.items():
-        if value is not None:  # only if user provided a value
-            fc_dict[field] = value
-        else:  # if user didnt provide, use masters value
-            if hasattr(master, field):
-                fc_dict[field] = getattr(master, field)
-    
-    # create FC object
-    fc = VehicleRegistrationFictitious(**fc_dict)
-    db.add(fc)
-    db.commit()
-    db.refresh(fc)
-    return fc
 
 # get uc/fc for a master record
 

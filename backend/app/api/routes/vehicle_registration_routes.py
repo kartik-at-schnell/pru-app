@@ -1,17 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Union
 from app.database import get_db
 from app.models.vehicle_registration import VehicleRegistrationMaster
 
 from app.crud.vehicle_registration_crud import (
-    create_fictitious,
-    create_undercover,
-    create_vehicle_record,
     get_all_masters_for_dropdown,
     get_all_vehicles,
-    get_fictitious_by_master,
-    get_undercover_by_master,
     get_vehicle_by_id,
     mark_fictitious_active,
     mark_fictitious_inactive,
@@ -27,7 +22,10 @@ from app.crud.vehicle_registration_crud import (
     bulk_set_on_hold,
     bulk_activate,
     bulk_deactivate,
-    bulk_delete
+    bulk_delete,
+    create_master_record,
+    create_undercover_record,
+    create_fictitious_record
 )
 
 from app.schemas.vehicle_registration_schema import(
@@ -43,7 +41,8 @@ from app.schemas.vehicle_registration_schema import(
     BulkActionResponse,
     VehicleRegistrationMasterResponse,
     VehicleRegistrationUnderCover,
-    VehicleRegistrationUnderCoverResponse
+    VehicleRegistrationUnderCoverResponse,
+    MasterCreateRequest,
 )
 from app.security import get_current_user
 
@@ -52,18 +51,24 @@ from app.models import user_models
 
 router = APIRouter(prefix="/vehicle-registration", tags=["Vehicle Registration"])
 
-# CREATE route
-@router.post("/", response_model=ApiResponse[VehicleRegistrationMaster], status_code=status.HTTP_201_CREATED)
-def create_vehicle(record: VehicleRegistrationMasterCreate,
-                   db: Session = Depends(get_db),
-                   current_user: user_models.User = Depends(get_current_user),
-                   record_type: Optional[str] = Query("master")):
-    # Simple wrapper for success
-    try:
-        new_record = create_vehicle_record(db, record, record_type=record_type)
-        return ApiResponse[VehicleRegistrationMaster](data=new_record, message="Record created successfully")
-    except Exception as e: # Basic error catch
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to create record: {e}")
+@router.post("/create")
+def create_vehicle_record(
+    record_type: str = Query(..., regex="^(master|undercover|fictitious)$"),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+    payload: Union[
+        MasterCreateRequest,
+        UnderCoverCreateRequest,
+        FictitiousCreateRequest
+    ] = Body(...)
+):
+    if record_type == "master":
+        return create_master_record(db, payload)
+    elif record_type == "undercover":
+        return create_undercover_record(db, payload)
+    elif record_type == "fictitious":
+        return create_fictitious_record(db, payload)
+
 
 # Read all
 @router.get("/")
