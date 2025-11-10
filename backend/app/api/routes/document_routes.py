@@ -1,0 +1,142 @@
+from typing import List, Optional
+from fastapi import APIRouter, Query, UploadFile, File, Form, Depends, HTTPException, Path
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+import shutil
+import os
+from uuid import uuid4
+from app.database import get_db
+from app.models.document_library import DocumentLibrary, DocumentAuditLog
+from app.schemas.document_schema import DocumentLibrarySchema, DocumentUploadResponse
+from datetime import datetime
+
+from app.schemas import document_schema
+from app.security import get_current_user
+
+router = APIRouter(prefix="/documents", tags=["Document Library"])
+
+UPLOAD_DIR = "app/static/uploads"
+
+@router.post("/upload", response_model=DocumentUploadResponse)
+async def upload_document(
+    file: UploadFile = File(...),
+    document_type: str = Form(...),
+    master_record_id: Optional[int] = Form(None),
+    db: Session = Depends(get_db)
+):
+    try:
+        # ensuring upload directory exists
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+        filename = f"{uuid4().hex}_{file.filename}"
+        file_path = os.path.join(UPLOAD_DIR, filename)
+
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # simulating S3 uri for now
+        document_url = f"/static/uploads/{filename}"
+
+        # Create db record
+        doc = DocumentLibrary(
+            document_name=file.filename,
+            document_type=document_type,
+            document_size=round(os.path.getsize(file_path) / 1024, 2),
+            document_url=document_url,
+            master_record_id=master_record_id,
+            created_at=func.now()
+        )
+        db.add(doc)
+        db.commit()
+        db.refresh(doc)
+
+        # logging upload action
+        log = DocumentAuditLog(
+            document_id=doc.id,
+            action="upload",
+            performed_by=None,  # can replace with current_user.id later
+            timestamp=func.now(),
+            notes="Uploaded via API"
+        )
+        db.add(log)
+        db.commit()
+
+        return DocumentUploadResponse(
+            id=doc.id,
+            document_name=doc.document_name,
+            document_type=doc.document_type,
+            document_url=doc.document_url,
+            status=doc.status
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+@router.post("/ocr/{document_id}")  
+def simulate_ocr_processing(
+    document_id: int = Path(...),
+    db: Session = Depends(get_db)
+):
+    doc = db.query(DocumentLibrary).filter_by(id=document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Simulated OCR response
+    simulated_ocr = {
+        "text": "this is a simulated OCR result for testing",
+        "confidence": 98.5,
+        "fields": {
+            "plate": "ABC123",
+            "owner": "Someone Someone",
+            "vin": "1HGCM82633A004352"
+        }
+    }
+
+    doc.ocr_response_json = simulated_ocr
+    doc.status = "completed"
+    db.commit()
+
+    # logging the action
+    log = DocumentAuditLog(
+        document_id=doc.id,
+        action="ocr_simulated",
+        performed_by=None,
+        notes="OCR simulated response attached"
+    )
+    db.add(log)
+    db.commit()
+
+    return {
+        "message": "OCR processing simulated successfully",
+        "ocr_data": simulated_ocr
+    }    
+
+@router.get("/", response_model=List[DocumentLibrarySchema])
+def list_documents(
+    master_record_id: Optional[int] = Query(None),
+    document_type: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    query = db.query(DocumentLibrary)
+
+    if master_record_id:
+        query = query.filter(DocumentLibrary.master_record_id == master_record_id)
+    if document_type:
+        query = query.filter(DocumentLibrary.document_type == document_type)
+    if status:
+        query = query.filter(DocumentLibrary.status == status)
+
+    return query.order_by(DocumentLibrary.created_at.desc()).all()
+
+@router.get("/{document_id}", response_model=DocumentLibrarySchema)
+def get_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    doc = db.query(DocumentLibrary).filter_by(id=document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return doc
+

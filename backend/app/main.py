@@ -8,6 +8,10 @@ from app.api.routes import action_routes
 from app.api.routes import dashboard_routes
 from app.api.routes import auth_routes
 
+from fastapi.staticfiles import StaticFiles
+
+from app.api.routes import document_routes
+
 
 app = FastAPI()
 
@@ -30,7 +34,7 @@ async def health():
         "status": 200,
         "message": "Server Running"
     }
-
+app.include_router(document_routes.router, prefix="/api", tags=["Document Library"])
 app.include_router(vehicle_registration_routes.router, prefix="/api")
 app.include_router(action_routes.router, prefix="/api")
 app.include_router(dashboard_routes.router, prefix="/api")
@@ -40,6 +44,8 @@ app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
 @app.get("/")
 async def root():
     return {"message": "Welcome to the PRU Automation API"}
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.get("/test")
 async def test(db: Session = Depends(get_db)):
