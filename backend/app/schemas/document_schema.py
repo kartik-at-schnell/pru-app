@@ -36,6 +36,7 @@ class DocumentResponse(BaseModel):
     abbyy_batch_id: Optional[str]
     created_at: Optional[datetime]
     master_record_id: Optional[int]
+    ocr_response_json: Optional[dict]
 
     class Config:
         from_attributes = True

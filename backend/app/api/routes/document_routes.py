@@ -22,15 +22,15 @@ UPLOAD_DIR = "app/static/uploads"
 # getall
 @router.get("/", response_model=ApiResponse[List[DocumentResponse]])
 def get_all_documents(
-    status: Optional[str] = Query(None),
+    # status: Optional[str] = Query(None),
     document_type: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     query = db.query(DocumentLibrary).filter(DocumentLibrary.is_archived == False)
 
-    if status:
-        query = query.filter(DocumentLibrary.status == status)
+    # if status:
+        # query = query.filter(DocumentLibrary.status == status)
     if document_type:
         query = query.filter(DocumentLibrary.document_type == document_type)
 
@@ -63,7 +63,7 @@ async def upload_document(
             document_size=round(os.path.getsize(file_path) / 1024, 2),
             document_url=document_url,
             master_record_id=master_record_id,
-            created_by=current_user.id,
+            created_by=[current_user.id, current_user.first_name],
             created_at=func.now()
         )
         db.add(doc)
@@ -74,7 +74,7 @@ async def upload_document(
         log = DocumentAuditLog(
             document_id=doc.id,
             action="upload",
-            performed_by=current_user.id,
+            performed_by=[current_user.id, current_user.first_name],
             timestamp=func.now(),
             notes="manual upload"
         )
@@ -122,4 +122,45 @@ def get_document(
     doc = db.query(DocumentLibrary).filter_by(id=document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    return doc
+    return 
+
+@router.post("/ocr/{document_id}")
+def simulate_ocr_processing(
+    document_id: int = Path(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    doc = db.query(DocumentLibrary).filter_by(id=document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    simulated_ocr = {
+        "text": "this is a simulated OCR result for testing",
+        "confidence": 98.5,
+        "fields": {
+            "plate": "ABC123",
+            "owner": "Someone Someone",
+            "vin": "1HGCM82633A004352"
+        }
+    }
+
+    doc.ocr_response_json = simulated_ocr
+    doc.status = "completed"
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+
+    log = DocumentAuditLog(
+        document_id=doc.id,
+        action="ocr_simulated",
+        performed_by=current_user.id,
+        timestamp=func.now(),
+        notes="OCR simulated response attached"
+    )
+    db.add(log)
+    db.commit()
+
+    return {
+        "message": "OCR processing simulated successfully",
+        "ocr_data": simulated_ocr
+    }
