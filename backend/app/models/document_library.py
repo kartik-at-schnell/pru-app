@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, JSON, func
+from sqlalchemy import Boolean, Column, Integer, String, Float, DateTime, ForeignKey, JSON, func
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .base import Base
@@ -18,8 +18,14 @@ class DocumentLibrary(Base):
     created_by = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=func.now())
     master_record_id = Column(Integer, ForeignKey("vehicle_registration_master.id"), nullable=True)
+    is_archived = Column(Boolean, default=False)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    modified_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
 
     #relationship
+    creator = relationship("User", foreign_keys=[created_by])
+    modifier = relationship("User", foreign_keys=[modified_by])
     master_record = relationship("VehicleRegistrationMaster", backref="documents")
 
 class DocumentAuditLog(Base):

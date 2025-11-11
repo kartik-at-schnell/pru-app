@@ -7,22 +7,43 @@ import os
 from uuid import uuid4
 from app.database import get_db
 from app.models.document_library import DocumentLibrary, DocumentAuditLog
-from app.schemas.document_schema import DocumentLibrarySchema, DocumentUploadResponse
+from app.schemas.document_schema import DocumentLibrarySchema, DocumentResponse, DocumentUploadResponse
 from datetime import datetime
 
 from app.schemas import document_schema
 from app.security import get_current_user
+from app.models.user_models import User
+from app.schemas.base_schema import ApiResponse
 
 router = APIRouter(prefix="/documents", tags=["Document Library"])
 
 UPLOAD_DIR = "app/static/uploads"
+
+# getall
+@router.get("/", response_model=ApiResponse[List[DocumentResponse]])
+def get_all_documents(
+    status: Optional[str] = Query(None),
+    document_type: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = db.query(DocumentLibrary).filter(DocumentLibrary.is_archived == False)
+
+    if status:
+        query = query.filter(DocumentLibrary.status == status)
+    if document_type:
+        query = query.filter(DocumentLibrary.document_type == document_type)
+
+    docs = query.order_by(DocumentLibrary.created_at.desc()).all()
+    return ApiResponse[List[DocumentResponse]](data=docs)
 
 @router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_document(
     file: UploadFile = File(...),
     document_type: str = Form(...),
     master_record_id: Optional[int] = Form(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     try:
         # ensuring upload directory exists
@@ -44,7 +65,9 @@ async def upload_document(
             document_size=round(os.path.getsize(file_path) / 1024, 2),
             document_url=document_url,
             master_record_id=master_record_id,
-            created_at=func.now()
+            created_by=current_user.id,
+            modified_by=current_user.id,
+            created_at=datetime.utcnow()
         )
         db.add(doc)
         db.commit()
@@ -54,9 +77,9 @@ async def upload_document(
         log = DocumentAuditLog(
             document_id=doc.id,
             action="upload",
-            performed_by=None,  # can replace with current_user.id later
-            timestamp=func.now(),
-            notes="Uploaded via API"
+            performed_by=current_user.id,
+            timestamp=datetime.utcnow(),
+            notes="manual upload"
         )
         db.add(log)
         db.commit()
@@ -71,10 +94,11 @@ async def upload_document(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
-@router.post("/ocr/{document_id}")  
+@router.post("/ocr/{document_id}")
 def simulate_ocr_processing(
     document_id: int = Path(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     doc = db.query(DocumentLibrary).filter_by(id=document_id).first()
     if not doc:
@@ -85,7 +109,7 @@ def simulate_ocr_processing(
         "text": "this is a simulated OCR result for testing",
         "confidence": 98.5,
         "fields": {
-            "plate": "ABC123",
+            "plate": "AQC123",
             "owner": "Someone Someone",
             "vin": "1HGCM82633A004352"
         }
@@ -93,13 +117,15 @@ def simulate_ocr_processing(
 
     doc.ocr_response_json = simulated_ocr
     doc.status = "completed"
+    doc.modified_by = current_user.id
     db.commit()
 
     # logging the action
     log = DocumentAuditLog(
         document_id=doc.id,
         action="ocr_simulated",
-        performed_by=None,
+        performed_by=current_user.id,
+        timestamp=datetime.utcnow(),
         notes="OCR simulated response attached"
     )
     db.add(log)
@@ -108,7 +134,7 @@ def simulate_ocr_processing(
     return {
         "message": "OCR processing simulated successfully",
         "ocr_data": simulated_ocr
-    }    
+    }
 
 @router.get("/", response_model=List[DocumentLibrarySchema])
 def list_documents(
@@ -116,7 +142,7 @@ def list_documents(
     document_type: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     query = db.query(DocumentLibrary)
 
@@ -133,10 +159,9 @@ def list_documents(
 def get_document(
     document_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     doc = db.query(DocumentLibrary).filter_by(id=document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     return doc
-
