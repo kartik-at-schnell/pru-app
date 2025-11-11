@@ -46,7 +46,6 @@ async def upload_document(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        # ensuring upload directory exists
         os.makedirs(UPLOAD_DIR, exist_ok=True)
 
         filename = f"{uuid4().hex}_{file.filename}"
@@ -55,10 +54,9 @@ async def upload_document(
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        # simulating S3 uri for now
         document_url = f"/static/uploads/{filename}"
 
-        # Create db record
+        # Create doc record
         doc = DocumentLibrary(
             document_name=file.filename,
             document_type=document_type,
@@ -66,8 +64,7 @@ async def upload_document(
             document_url=document_url,
             master_record_id=master_record_id,
             created_by=current_user.id,
-            modified_by=current_user.id,
-            created_at=datetime.utcnow()
+            created_at=func.now()
         )
         db.add(doc)
         db.commit()
@@ -78,7 +75,7 @@ async def upload_document(
             document_id=doc.id,
             action="upload",
             performed_by=current_user.id,
-            timestamp=datetime.utcnow(),
+            timestamp=func.now(),
             notes="manual upload"
         )
         db.add(log)
@@ -89,52 +86,13 @@ async def upload_document(
             document_name=doc.document_name,
             document_type=doc.document_type,
             document_url=doc.document_url,
-            status=doc.status
+            status=doc.status,
+            created_by=doc.created_by
         )
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
-@router.post("/ocr/{document_id}")
-def simulate_ocr_processing(
-    document_id: int = Path(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    doc = db.query(DocumentLibrary).filter_by(id=document_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
-
-    # Simulated OCR response
-    simulated_ocr = {
-        "text": "this is a simulated OCR result for testing",
-        "confidence": 98.5,
-        "fields": {
-            "plate": "AQC123",
-            "owner": "Someone Someone",
-            "vin": "1HGCM82633A004352"
-        }
-    }
-
-    doc.ocr_response_json = simulated_ocr
-    doc.status = "completed"
-    doc.modified_by = current_user.id
-    db.commit()
-
-    # logging the action
-    log = DocumentAuditLog(
-        document_id=doc.id,
-        action="ocr_simulated",
-        performed_by=current_user.id,
-        timestamp=datetime.utcnow(),
-        notes="OCR simulated response attached"
-    )
-    db.add(log)
-    db.commit()
-
-    return {
-        "message": "OCR processing simulated successfully",
-        "ocr_data": simulated_ocr
-    }
 
 @router.get("/", response_model=List[DocumentLibrarySchema])
 def list_documents(
