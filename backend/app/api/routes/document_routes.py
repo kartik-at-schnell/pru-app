@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Query, UploadFile, File, Form, Depends, HTTPException, Path
+from fastapi import APIRouter, Body, Query, UploadFile, File, Form, Depends, HTTPException, Path
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 import shutil
@@ -7,7 +7,7 @@ import os
 from uuid import uuid4
 from app.database import get_db
 from app.models.document_library import DocumentLibrary, DocumentAuditLog
-from app.schemas.document_schema import DocumentLibrarySchema, DocumentResponse, DocumentUploadResponse
+from app.schemas.document_schema import DocumentLibrarySchema, DocumentResponse, DocumentUpdateRequest, DocumentUploadResponse
 from datetime import datetime
 
 from app.schemas import document_schema
@@ -164,3 +164,77 @@ def simulate_ocr_processing(
         "message": "OCR processing simulated successfully",
         "ocr_data": simulated_ocr
     }
+
+# update docs
+@router.put("/{document_id}", response_model=DocumentUploadResponse)
+def update_document(
+document_id: int,
+payload: DocumentUpdateRequest = Body(...),
+db: Session = Depends(get_db),
+current_user: User = Depends(get_current_user)
+):
+    doc = db.query(DocumentLibrary).filter(DocumentLibrary.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+
+    for key, value in payload.dict(exclude_unset=True).items():
+        setattr(doc, key, value)
+
+
+    doc.modified_by = current_user.id
+    doc.modified_at = func.now()
+    db.commit()
+    db.refresh(doc)
+
+
+    log = DocumentAuditLog(
+    document_id=doc.id,
+    action="update",
+    performed_by=current_user.id,
+    timestamp=func.now(),
+    notes="Document metadata updated"
+    )
+    db.add(log)
+    db.commit()
+
+
+    return DocumentUploadResponse(
+    id=doc.id,
+    document_name=doc.document_name,
+    document_type=doc.document_type,
+    document_url=doc.document_url,
+    status=doc.status,
+    created_by=doc.created_by
+    )
+
+
+@router.delete("/{document_id}")
+def archive_document(
+document_id: int,
+db: Session = Depends(get_db),
+current_user: User = Depends(get_current_user)
+):
+    doc = db.query(DocumentLibrary).filter_by(id=document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+
+    doc.is_archived = True
+    doc.modified_by = current_user.id
+    doc.modified_at = func.now()
+    db.commit()
+
+
+    log = DocumentAuditLog(
+    document_id=doc.id,
+    action="archive",
+    performed_by=current_user.id,
+    timestamp=func.now(),
+    notes="Document archived (soft delete)"
+    )
+    db.add(log)
+    db.commit()
+
+
+    return {"message": f"Document {document_id} archived successfully."}

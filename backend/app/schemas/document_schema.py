@@ -40,3 +40,14 @@ class DocumentResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+#update req schema
+class DocumentUpdateRequest(BaseModel):
+    document_name: Optional[str]
+    document_type: Optional[str]
+    status: Optional[str]
+    content_type: Optional[str]
+
+    class Config:
+        orm_mode = True
+
