@@ -157,13 +157,6 @@ def list_vehicles_on_hold(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records {e}")
 
-# Read one
-# @router.get("/{record_id}", response_model=ApiResponse[VehicleRegistrationMaster])
-# def get_vehicle(record_id: str, db: Session = Depends(get_db), current_user: user_models.User = Depends(get_current_user)):
-#     record = get_vehicle_by_id(db, record_id)
-#     if not record:
-#         raise HTTPException(status_code=404, detail="Vehicle record not found")
-#     return ApiResponse[VehicleRegistrationMaster](data=record)
 
 #update
 @router.put("/{record_id}", response_model=ApiResponse[VehicleRegistrationMaster])
@@ -172,14 +165,6 @@ def update_vehicle(record_id: str, update_data: VehicleRegistrationMasterBase, d
     if not updated:
         raise HTTPException(status_code=404, detail="Vehicle record not found")
     return ApiResponse[VehicleRegistrationMaster](data=updated, message="Record updated successfully")
-
-# # delete
-# @router.delete("/{record_id}", response_model=ApiResponse)
-# def delete_vehicle(record_id: str, db: Session = Depends(get_db), current_user: user_models.User = Depends(get_current_user)):
-#     deleted = delete_vehicle_record(db, record_id)
-#     if not deleted:
-#         raise HTTPException(status_code=404, detail="Vehicle record not found")
-#     return ApiResponse(message=f"Record ID {record_id} deleted successfully")
 
 # mark inactive
 @router.post("/{record_id}/inactive")
@@ -226,35 +211,6 @@ def get_masters_dropdown(
     return [{"id": m[0], "vin": m[1], "owner": m[2]} for m in masters]
 
 
-# Undercover
-
-@router.post("/undercover/create")
-def create_undercover_route(
-    payload: UnderCoverCreateRequest,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    master = db.query(VehicleRegistrationMaster).filter_by(id=payload.master_record_id).first()
-    if not master:
-        raise HTTPException(status_code=404, detail="Master record not found")
-
-    uc = VehicleRegistrationUnderCover(
-        master_record_id=master.id,
-        vehicle_id_number=master.vehicle_id_number,
-        **payload.model_dump(exclude={"master_record_id"})
-    )
-
-    db.add(uc)
-    db.commit()
-    db.refresh(uc)
-
-    return {
-        "id": uc.id,
-        "license_number": uc.license_number,
-        "vehicle_id_number": uc.vehicle_id_number,
-        "master_id": uc.master_record_id
-    }
-
 # @router.get("/undercover/master/{master_id}")
 # def get_uc_by_master(
 #     master_id: str,
@@ -281,35 +237,6 @@ def create_undercover_route(
 # ):
 #     mark_undercover_inactive(db, uc_id)
 #     return {"status": "marked inactive", "uc_id": uc_id}
-
-
-# Fictitious
-
-@router.post("/fictitious/create")
-def create_fictitious_route(
-    payload: FictitiousCreateRequest,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    master = db.query(VehicleRegistrationMaster).filter_by(id=payload.master_record_id).first()
-    if not master:
-        raise HTTPException(status_code=404, detail="Master record not found")
-
-    fc = VehicleRegistrationFictitious(
-        master_record_id=master.id,
-        vehicle_id_number=master.vehicle_id_number,
-        **payload.model_dump(exclude={"master_record_id"})
-    )
-
-    db.add(fc)
-    db.commit()
-    db.refresh(fc)
-    return {
-        "id": fc.id,
-        "license_number": fc.license_number,
-        "vehicle_id_number": fc.vehicle_id_number,
-        "master_id": fc.master_record_id
-    }
 
 
 # @router.get("/fictitious/master/{master_id}")
@@ -421,19 +348,19 @@ def bulk_deactivate_route(
     )
     return ApiResponse[BulkActionResponse](data=response_data)
 
-# bulk delete
-@router.delete("/bulk-delete", response_model=ApiResponse[BulkActionResponse])
-def bulk_delete_route(
-    request: BulkActionRequest,
-    db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
-):
-    deleted_count = bulk_delete(db, request.record_ids)
+# # bulk delete
+# @router.delete("/bulk-delete", response_model=ApiResponse[BulkActionResponse])
+# def bulk_delete_route(
+#     request: BulkActionRequest,
+#     db: Session = Depends(get_db),
+#     current_user: user_models.User = Depends(get_current_user)
+# ):
+#     deleted_count = bulk_delete(db, request.record_ids)
     
-    response_data = BulkActionResponse(
-        success_count=deleted_count,
-        failed_count=len(request.record_ids) - deleted_count,
-        message=f"Successfully deleted {deleted_count} records"
-    )
-    return ApiResponse[BulkActionResponse](data=response_data)
+#     response_data = BulkActionResponse(
+#         success_count=deleted_count,
+#         failed_count=len(request.record_ids) - deleted_count,
+#         message=f"Successfully deleted {deleted_count} records"
+#     )
+#     return ApiResponse[BulkActionResponse](data=response_data)
 

@@ -63,7 +63,7 @@ async def upload_document(
             document_size=round(os.path.getsize(file_path) / 1024, 2),
             document_url=document_url,
             master_record_id=master_record_id,
-            created_by=[current_user.id, current_user.first_name],
+            created_by=current_user.id,
             created_at=func.now()
         )
         db.add(doc)
@@ -74,7 +74,7 @@ async def upload_document(
         log = DocumentAuditLog(
             document_id=doc.id,
             action="upload",
-            performed_by=[current_user.id, current_user.first_name],
+            performed_by= current_user.id,
             timestamp=func.now(),
             notes="manual upload"
         )
