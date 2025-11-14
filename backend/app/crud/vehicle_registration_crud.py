@@ -244,8 +244,6 @@ def get_all_masters_for_dropdown(db: Session):
         VehicleRegistrationMaster.id, 
         VehicleRegistrationMaster.vehicle_id_number,
         VehicleRegistrationMaster.registered_owner
-    ).filter(
-        VehicleRegistrationMaster.active_status == True  # Only active masters
     ).all()
 
 # get uc/fc for a master record

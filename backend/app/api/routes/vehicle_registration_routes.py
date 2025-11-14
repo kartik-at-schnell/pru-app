@@ -2,24 +2,23 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional, Union
 from app.database import get_db
-from app.models.vehicle_registration import VehicleRegistrationMaster
 
 from app.crud.vehicle_registration_crud import (
-    get_all_masters_for_dropdown,
-    get_all_vehicles,
-    update_vehicle_record,
-    get_vehicle_master_details,
     create_master_record,
     create_undercover_record,
-    create_fictitious_record
+    create_fictitious_record,
+    get_all_masters_for_dropdown,
+    get_all_vehicles,
+    get_vehicle_master_details,
+    update_vehicle_record
 )
 
 from app.schemas.vehicle_registration_schema import(
     FictitiousCreateRequest,
     UnderCoverCreateRequest,
     VehicleRegistrationFictitiousResponse,
-    VehicleRegistrationMasterBase,
     VehicleRegistrationMaster,
+    VehicleRegistrationMasterBase,
     VehicleRegistrationMasterDetails,
     VehicleRegistrationMasterResponse,
     VehicleRegistrationUnderCoverResponse,
@@ -31,8 +30,13 @@ from app.schemas.base_schema import ApiResponse
 from app.models import user_models
 
 router = APIRouter(prefix="/vehicle-registration", tags=["Vehicle Registration"])
-
-@router.post("/create")
+    
+# create new records
+@router.post("/create", response_model=ApiResponse[Union[
+    VehicleRegistrationMasterResponse, 
+    VehicleRegistrationUnderCoverResponse, 
+    VehicleRegistrationFictitiousResponse
+]])
 def create_vehicle_record(
     record_type: str = Query(..., regex="^(master|undercover|fictitious)$"),
     db: Session = Depends(get_db),
@@ -43,13 +47,37 @@ def create_vehicle_record(
         FictitiousCreateRequest
     ] = Body(...)
 ):
-    if record_type == "master":
-        return create_master_record(db, payload)
-    elif record_type == "undercover":
-        return create_undercover_record(db, payload)
-    elif record_type == "fictitious":
-        return create_fictitious_record(db, payload)
-
+    try:
+        if record_type == "master":
+            result = create_master_record(db, payload)
+            data = VehicleRegistrationMasterResponse.model_validate(result)
+            return ApiResponse(
+                status="success",
+                message=f"Master record created successfully with ID {result.id}",
+                data=data
+            )
+        elif record_type == "undercover":
+            result = create_undercover_record(db, payload)
+            data = VehicleRegistrationUnderCoverResponse.model_validate(result)
+            return ApiResponse(
+                status="success",
+                message=f"Undercover record created successfully with ID {result.id}",
+                data=data
+            )
+        elif record_type == "fictitious":
+            result = create_fictitious_record(db, payload)
+            data = VehicleRegistrationFictitiousResponse.model_validate(result)
+            return ApiResponse(
+                status="success",
+                message=f"Fictitious record created successfully with ID {result.id}",
+                data=data
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create record: {str(e)}"
+        )
+    
 # Read all
 @router.get("/", response_model=ApiResponse[List[Union[
     VehicleRegistrationMasterResponse,
@@ -180,4 +208,3 @@ def get_masters_dropdown(
 #         message=f"Successfully deleted {deleted_count} records"
 #     )
 #     return ApiResponse[BulkActionResponse](data=response_data)
-

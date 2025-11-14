@@ -27,7 +27,7 @@ def get_all_documents(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(DocumentLibrary).filter(DocumentLibrary.is_archived == False)
+    query = db.query(DocumentLibrary)
 
     # if status:
         # query = query.filter(DocumentLibrary.status == status)

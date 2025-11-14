@@ -20,6 +20,7 @@ class DocumentLibrarySchema(BaseModel):
     created_at: datetime
     created_by: Optional[int]
     modified_by: Optional[int]
+    is_archived: Optional[bool]
 
     class Config:
         orm_mode = True
@@ -37,6 +38,7 @@ class DocumentResponse(BaseModel):
     created_at: Optional[datetime]
     master_record_id: Optional[int]
     ocr_response_json: Optional[dict]
+    is_archived: bool
 
     class Config:
         from_attributes = True

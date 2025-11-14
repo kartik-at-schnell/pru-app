@@ -306,6 +306,7 @@ class VehicleRegistrationResponse(BaseModel):
 class VehicleRegistrationMasterResponse(VehicleRegistrationResponse):
     approval_status: Optional[str] = None
     list: str = Field(default="Master Record")
+    active_status: Optional[bool]
     
     class Config:
         from_attributes = True
@@ -314,6 +315,7 @@ class VehicleRegistrationMasterResponse(VehicleRegistrationResponse):
 class VehicleRegistrationUnderCoverResponse(VehicleRegistrationResponse):
     list: str = Field(default="Undercover Record")
     master_record_id : Optional[int] = None
+    active_status: Optional[bool]
     
     class Config:
         from_attributes = True
@@ -323,6 +325,8 @@ class VehicleRegistrationUnderCoverResponse(VehicleRegistrationResponse):
 class VehicleRegistrationFictitiousResponse(VehicleRegistrationResponse):
     list: str = Field(default="Fictitious Record")
     master_record_id : Optional[int] = None
+    active_status: Optional[bool]
+    
     class Config:
         from_attributes = True
 
