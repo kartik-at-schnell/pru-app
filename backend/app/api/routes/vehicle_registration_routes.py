@@ -7,22 +7,8 @@ from app.models.vehicle_registration import VehicleRegistrationMaster
 from app.crud.vehicle_registration_crud import (
     get_all_masters_for_dropdown,
     get_all_vehicles,
-    get_vehicle_by_id,
-    mark_fictitious_active,
-    mark_fictitious_inactive,
-    mark_undercover_active,
-    mark_undercover_inactive,
     update_vehicle_record,
-    delete_vehicle_record,
     get_vehicle_master_details,
-    mark_active,
-    mark_inactive,
-    bulk_approve,
-    bulk_reject,
-    bulk_set_on_hold,
-    bulk_activate,
-    bulk_deactivate,
-    bulk_delete,
     create_master_record,
     create_undercover_record,
     create_fictitious_record
@@ -31,16 +17,11 @@ from app.crud.vehicle_registration_crud import (
 from app.schemas.vehicle_registration_schema import(
     FictitiousCreateRequest,
     UnderCoverCreateRequest,
-    VehicleRegistrationFictitious,
     VehicleRegistrationFictitiousResponse,
-    VehicleRegistrationMasterCreate,
     VehicleRegistrationMasterBase,
     VehicleRegistrationMaster,
     VehicleRegistrationMasterDetails,
-    BulkActionRequest,
-    BulkActionResponse,
     VehicleRegistrationMasterResponse,
-    VehicleRegistrationUnderCover,
     VehicleRegistrationUnderCoverResponse,
     MasterCreateRequest,
 )
@@ -69,19 +50,26 @@ def create_vehicle_record(
     elif record_type == "fictitious":
         return create_fictitious_record(db, payload)
 
-
 # Read all
-@router.get("/")
+@router.get("/", response_model=ApiResponse[List[Union[
+    VehicleRegistrationMasterResponse,
+    VehicleRegistrationUnderCoverResponse,
+    VehicleRegistrationFictitiousResponse
+]]])
 def list_vehicles(
     skip: int = 0,
     limit: int = 25,
     search: Optional[str] = Query(None, description="Search by license number"),
-    record_type: Optional[str] = Query(None, description="Filter: master, undercover, or fictitious"),
+    record_type: Optional[str] = Query(None, description="master, undercover, or fictitious"),
+    approval_status: Optional[str] = Query(None, description="pending, approved, rejected, on_hold"),
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(get_current_user)
 ):
     try:
-        vehicle_list = get_all_vehicles(db, skip=skip, limit=limit, search=search, record_type=record_type)
+        vehicle_list = get_all_vehicles(
+            db, skip=skip, limit=limit, search=search,
+            record_type=record_type, approval_status=approval_status
+        )
 
         if record_type == "undercover":
             data = [VehicleRegistrationUnderCoverResponse.model_validate(v) for v in vehicle_list]
@@ -89,73 +77,10 @@ def list_vehicles(
             data = [VehicleRegistrationFictitiousResponse.model_validate(v) for v in vehicle_list]
         else:
             data = [VehicleRegistrationMasterResponse.model_validate(v) for v in vehicle_list]
-            
-        return ApiResponse[List[type(data[0])]](data=data)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records {e}")
-    
-# read PENDING
-@router.get("/pending", response_model=ApiResponse[List[VehicleRegistrationMaster]])
-def list_vehicles_pending(
-    skip: int = 0,
-    limit: int = 25,
-    search: Optional[str] = Query(None, description="Search by license number"),
-    db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
-):
-    try:
-        vehicle_list = get_all_vehicles(db, skip=skip, limit=limit, search=search, record_type=None, approval_status="pending")
-        return ApiResponse[List[VehicleRegistrationMaster]](data=vehicle_list)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records {e}")
-    
 
-# read APPROVED
-@router.get("/approved", response_model=ApiResponse[List[VehicleRegistrationMaster]])
-def list_vehicles_approved(
-    skip: int = 0,
-    limit: int = 25,
-    search: Optional[str] = Query(None, description="Search by license number"),
-    db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
-):
-    try:
-        vehicle_list = get_all_vehicles(db, skip=skip, limit=limit, search=search, record_type=None, approval_status="approved")
-        return ApiResponse[List[VehicleRegistrationMaster]](data=vehicle_list)
+        return ApiResponse(data=data)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records {e}")
-
-
-# read REJECTED
-@router.get("/rejected", response_model=ApiResponse[List[VehicleRegistrationMaster]])
-def list_vehicles_rejected(
-    skip: int = 0,
-    limit: int = 25,
-    search: Optional[str] = Query(None, description="Search by license number"),
-    db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
-):
-    try:
-        vehicle_list = get_all_vehicles(db, skip=skip, limit=limit, search=search, record_type=None, approval_status="rejected")
-        return ApiResponse[List[VehicleRegistrationMaster]](data=vehicle_list)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records {e}")
-
-
-# read ON HOLD
-@router.get("/on-hold", response_model=ApiResponse[List[VehicleRegistrationMaster]])
-def list_vehicles_on_hold(
-    skip: int = 0,
-    limit: int = 25,
-    search: Optional[str] = Query(None, description="Search by license number"),
-    db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
-):
-    try:
-        vehicle_list = get_all_vehicles(db, skip=skip, limit=limit, search=search, record_type=None, approval_status="on_hold")
-        return ApiResponse[List[VehicleRegistrationMaster]](data=vehicle_list)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records: {e}")
 
 
 #update
@@ -166,31 +91,6 @@ def update_vehicle(record_id: str, update_data: VehicleRegistrationMasterBase, d
         raise HTTPException(status_code=404, detail="Vehicle record not found")
     return ApiResponse[VehicleRegistrationMaster](data=updated, message="Record updated successfully")
 
-# mark inactive
-@router.post("/{record_id}/inactive")
-async def mark_inactive_route(
-    record_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    record = mark_inactive(db, record_id)
-    if not record:
-        raise HTTPException(status_code=404, detail="Record not found")
-    return {"status": "marked inactive", "record_id": record_id}
-
-# mark active
-@router.post("/{record_id}/active")
-async def mark_active_route(
-    record_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    record = mark_active(db, record_id)
-    if not record:
-        raise HTTPException(status_code=404, detail="Record not found")
-    return {"status": "marked active", "record_id": record_id}
-
-
 # Details endpoint
 @router.get("/{master_id}/details", response_model=ApiResponse[VehicleRegistrationMasterDetails])
 def get_master_record_details(master_id: str, db: Session = Depends(get_db), current_user: user_models.User = Depends(get_current_user)):
@@ -198,8 +98,6 @@ def get_master_record_details(master_id: str, db: Session = Depends(get_db), cur
     if db_record is None:
         raise HTTPException(status_code=404, detail="Vehicle Master Record not found")
     return ApiResponse[VehicleRegistrationMasterDetails](data=db_record)
-
-# new UC FC routes
 
 # get dropdown of masters
 @router.get("/masters/dropdown")
@@ -266,87 +164,6 @@ def get_masters_dropdown(
 #     mark_fictitious_inactive(db, fc_id)
 #     return {"status": "marked inactive", "fc_id": fc_id}
 
-# bulk actions routes
-
-#bulk approve
-@router.post("/bulk-approve", response_model=ApiResponse[BulkActionResponse])
-def bulk_approve_route(
-    request: BulkActionRequest,
-    db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
-):
-    updated_count = bulk_approve(db, request.record_ids)
-    
-    response_data = BulkActionResponse(
-        success_count=updated_count,
-        failed_count=len(request.record_ids) - updated_count,
-        message=f"Successfully approved {updated_count} records"
-    )
-    return ApiResponse[BulkActionResponse](data=response_data)
-
-# bulk reject
-@router.post("/bulk-reject", response_model=ApiResponse[BulkActionResponse])
-def bulk_reject_route(
-    request: BulkActionRequest,
-    db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
-):
-    updated_count = bulk_reject(db, request.record_ids)
-    
-    response_data = BulkActionResponse(
-        success_count=updated_count,
-        failed_count=len(request.record_ids) - updated_count,
-        message=f"Successfully rejected {updated_count} records"
-    )
-    return ApiResponse[BulkActionResponse](data=response_data)
-
-# bulk on-hold
-@router.post("/bulk-on-hold", response_model=ApiResponse[BulkActionResponse])
-def bulk_on_hold_route(
-    request: BulkActionRequest,
-    db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
-):
-    updated_count = bulk_set_on_hold(db, request.record_ids)
-    
-    response_data = BulkActionResponse(
-        success_count=updated_count,
-        failed_count=len(request.record_ids) - updated_count,
-        message=f"Successfully set {updated_count} records to on-hold"
-    )
-    return ApiResponse[BulkActionResponse](data=response_data)
-
-#bulk flag active
-@router.post("/bulk-activate", response_model=ApiResponse[BulkActionResponse])
-def bulk_activate_route(
-    request: BulkActionRequest,
-    db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
-):
-    updated_count = bulk_activate(db, request.record_ids)
-    
-    response_data = BulkActionResponse(
-        success_count=updated_count,
-        failed_count=len(request.record_ids) - updated_count,
-        message=f"Successfully activated {updated_count} records"
-    )
-    return ApiResponse[BulkActionResponse](data=response_data)
-
- # bulk flag inactive
-@router.post("/bulk-deactivate", response_model=ApiResponse[BulkActionResponse])
-def bulk_deactivate_route(
-    request: BulkActionRequest,
-    db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
-):
-    updated_count = bulk_deactivate(db, request.record_ids)
-    
-    response_data = BulkActionResponse(
-        success_count=updated_count,
-        failed_count=len(request.record_ids) - updated_count,
-        message=f"Successfully deactivated {updated_count} records"
-    )
-    return ApiResponse[BulkActionResponse](data=response_data)
 
 # # bulk delete
 # @router.delete("/bulk-delete", response_model=ApiResponse[BulkActionResponse])

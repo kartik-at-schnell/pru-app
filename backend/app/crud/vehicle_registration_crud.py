@@ -177,6 +177,16 @@ def mark_inactive(db, record_id: int):
     record = db.query(VehicleRegistrationMaster).get(record_id)
     if(record):
         record.active_status = False
+
+        # cascade to children in fictitious and undercoveer records
+        db.query(VehicleRegistrationUnderCover).filter(
+            VehicleRegistrationUnderCover.master_record_id == record_id
+        ).update({"active_status": False}, synchronize_session=False)
+        
+        db.query(VehicleRegistrationFictitious).filter(
+            VehicleRegistrationFictitious.master_record_id == record_id
+        ).update({"active_status": False}, synchronize_session=False)
+
         db.commit()
         return record
     
@@ -188,6 +198,16 @@ def mark_active(db, record_id: int):
 
     if(record):
         record.active_status = True
+
+        # cascade to children
+        db.query(VehicleRegistrationUnderCover).filter(
+            VehicleRegistrationUnderCover.master_record_id == record_id
+        ).update({"active_status": True}, synchronize_session=False)
+        
+        db.query(VehicleRegistrationFictitious).filter(
+            VehicleRegistrationFictitious.master_record_id == record_id
+        ).update({"active_status": True}, synchronize_session=False)
+
         db.commit()
         return record
     return None
@@ -331,7 +351,7 @@ def bulk_set_on_hold(db: Session, record_ids: List[int]):
         raise HTTPException(status_code=500, detail=f"Bulk on-hold failed: {str(e)}")
 
 #flag rcords active in bulk 
-def bulk_activate(db: Session, record_ids: List[int]):
+def bulk_active(db: Session, record_ids: List[int]):
     try:
         updated_count = db.query(VehicleRegistrationMaster).filter(
             VehicleRegistrationMaster.id.in_(record_ids),
@@ -347,7 +367,7 @@ def bulk_activate(db: Session, record_ids: List[int]):
         raise HTTPException(status_code=500, detail=f"Bulk activate failed: {str(e)}")
 
 #flag multiple records inactive
-def bulk_deactivate(db: Session, record_ids: List[int]):
+def bulk_inactive(db: Session, record_ids: List[int]):
     try:
         updated_count = db.query(VehicleRegistrationMaster).filter(
             VehicleRegistrationMaster.id.in_(record_ids),

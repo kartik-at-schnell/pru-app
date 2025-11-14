@@ -7,6 +7,9 @@ from app.schemas.action_schema import ActionRequest, ActionResponse, ActionLogOu
 from app.database import get_db
 from app.models import user_models
 from app.security import get_current_user
+from app.crud.vehicle_registration_crud import bulk_active, bulk_approve, bulk_inactive, bulk_reject, bulk_set_on_hold, mark_active, mark_inactive
+from app.schemas.base_schema import ApiResponse
+from app.schemas.vehicle_registration_schema import BulkActionRequest, BulkActionResponse
 
 router = APIRouter(prefix="/actions", tags=["Record Actions"])
 
@@ -104,3 +107,110 @@ def hold_record(record_id: str,
         notes="Put on hold via quick action"
     )
     return perform_action(action_data, request, db, current_user)
+
+# mark inactive
+@router.post("/{record_id}/inactive")
+async def mark_inactive_route(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    record = mark_inactive(db, record_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return {"status": "marked inactive", "record_id": record_id}
+
+# mark active
+@router.post("/{record_id}/active")
+async def mark_active_route(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    record = mark_active(db, record_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return {"status": "marked active", "record_id": record_id}
+
+
+# bulk actions routes
+
+#bulk approve
+@router.post("/bulk-approve", response_model=ApiResponse[BulkActionResponse])
+def bulk_approve_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    updated_count = bulk_approve(db, request.record_ids)
+    
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully approved {updated_count} records"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
+
+# bulk reject
+@router.post("/bulk-reject", response_model=ApiResponse[BulkActionResponse])
+def bulk_reject_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    updated_count = bulk_reject(db, request.record_ids)
+    
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully rejected {updated_count} records"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
+
+# bulk on-hold
+@router.post("/bulk-on-hold", response_model=ApiResponse[BulkActionResponse])
+def bulk_on_hold_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    updated_count = bulk_set_on_hold(db, request.record_ids)
+    
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully set {updated_count} records to on-hold"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
+
+#bulk flag active
+@router.post("/bulk-active", response_model=ApiResponse[BulkActionResponse])
+def bulk_active_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    updated_count = bulk_active(db, request.record_ids)
+    
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully activated {updated_count} records"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
+
+ # bulk flag inactive
+@router.post("/bulk-inactive", response_model=ApiResponse[BulkActionResponse])
+def bulk_inactive_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    updated_count = bulk_inactive(db, request.record_ids)
+    
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully deactivated {updated_count} records"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
