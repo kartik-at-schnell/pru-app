@@ -9,7 +9,7 @@ from app.security import (
     create_access_token,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
-from app.utils.hash_password import verify_password, hash_password
+# from app.utils.hash_password import verify_password, hash_password
 from app.schemas import user_schema
 
 router = APIRouter(tags=["Authentication"])
@@ -20,7 +20,7 @@ async def login_for_access_token(
     db: Session = Depends(get_db)
 ):
     user = user_crud.get_user_by_email(db, email=form_data.username) # form_data uses username, so username = email
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if not user or user.hashed_password != form_data.password:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",

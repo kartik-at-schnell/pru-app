@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime, date
 from typing import Optional, List
+from pydantic import Field, field_validator
 
 class Config:
     from_attributes = True #tells orm can access attributes
@@ -78,23 +79,76 @@ class VehicleRegistrationFictitious(BaseModel):
 
 # schemas for our main Master table
 class VehicleRegistrationMasterBase(BaseModel):
-    # These are all the columns from your model
-    exempted_license_plate: Optional[str] = None
-    license_number: Optional[str] = None
-    vehicle_id_number: Optional[str] = None
-    register_owner: Optional[str] = None
-    make: Optional[str] = None
-    model: Optional[str] = None
-    year: Optional[int] = None
-    status: Optional[str] = "Pending"
+
+    id: int = Field(alias="id")
+    title: Optional[str] = None
+    parent: str = Field(default="Vehicle Registration")
+    list: str = Field(default="Master Record")
+    key: str = Field(alias="vehicle_id_number")
+    owner: str = Field(alias="registered_owner")
+    submitted: datetime = Field(alias="created_at")
+    status: str = Field(alias="approval_status")
+    canApprove: bool = Field(default=True)
+    
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+    
+    @field_validator('title', mode='before')
+    @classmethod
+    def compute_title(cls, v, info):
+        vin = str(info.data.get('id', 'N/A')).zfill(4) if info.data.get('id') else 'N/A'
+        status = info.data.get('approval_status', 'Pending').capitalize()
+        return f"{vin} • {status}"
+
+
+    id: int = Field(alias="id")
+    title: Optional[str] = None
+    parent: str = Field(default="Vehicle Registration")
+    list: str = Field(default="Master Record")
+    key: str = Field(alias="vehicle_id_number")
+    owner: str = Field(alias="registered_owner")
+    submitted: datetime = Field(alias="created_at")
+    status: str = Field(alias="approval_status")
+    canApprove: bool = Field(default=True)
+    
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+    
+    @field_validator('title', mode='before')
+    @classmethod
+    def compute_title(cls, v, info):
+        vin = str(info.data.get('id', 'N/A')).zfill(4) if info.data.get('id') else 'N/A'
+        status = info.data.get('approval_status', 'Pending').capitalize()
+        return f"{vin} • {status}"
 
 # when we CREATE a new record
-class VehicleRegistrationMasterCreate(VehicleRegistrationMasterBase):
-    id: str  # Must provide VIN when creating
+class VehicleRegistrationMasterCreate(BaseModel):
+    license_number: str
+    vehicle_id_number: str
+    registered_owner: str
+    address: str
+    city: str
+    state: str = "California"
+    zip_code: str
+    make: str
+    model: str
+    year_model: int
+    body_type: Optional[str] = None
+    type_license: Optional[str] = None
+    type_vehicle: Optional[str] = None
+    category: Optional[str] = None
+    expiration_date: Optional[date] = None
+    date_issued: Optional[date] = None
+    approval_status: str = "pending"
+
+    class Config:
+        from_attributes = True
 
 # reading a master record (the normal response)
 class VehicleRegistrationMaster(VehicleRegistrationMasterBase):
-    id: str
+    id: int
     created_at: datetime
     updated_at: datetime
     
@@ -113,19 +167,8 @@ class VehicleRegistrationMasterDetails(VehicleRegistrationMaster):
     class Config:
         from_attributes = True
 
-class VehicleRegistrationListItem(BaseModel):
-    id: str # Formatted ID: "VR-YYYY-NNNNN"
-    title: str # Formatted title
-    parent: str = "Vehicle Registration" # Static value
-    list_name: str = "Master Record" # Static value (maps to list/table name)
-    key: str # Formatted key: "VIN: XXXXX..."
-    owner: str # Formatted owner name: "J. Rivera"
-    submitted: str # Formatted date: "YYYY-MM-DD"
-    status: str # The approval_status field
-    canApprove: bool # Logic based on status
-    
-    class Config:
-        from_attributes = True # Allow creating from DB model attributes
+
+
 
 #Create/Update schemas for all those other tables
 
@@ -165,3 +208,125 @@ class VehicleRegistrationUnderCoverTrapInfoCreateBody(BaseModel):
 class VehicleRegistrationFictitiousTrapInfoCreateBody(BaseModel):
     date: Optional[datetime] = None
     number: Optional[str] = None
+
+# new schemas
+
+#schemas for creating new records
+class BaseVehicleRegistrationCreate(BaseModel):
+    license_number: str
+    registered_owner: str
+    vehicle_id_number: Optional[str] = None
+    address: str
+    city: str
+    state: str
+    zip_code: str
+    make: str
+    year_model: int
+    active_status: bool = True
+
+class MasterCreateRequest(BaseVehicleRegistrationCreate):
+    model: str
+    body_type: str
+    type_license: str
+    type_vehicle: str
+
+class UnderCoverCreateRequest(BaseVehicleRegistrationCreate):
+    master_record_id: int
+    class_type: str
+    type_license: str
+    expiration_date: date
+    date_issued: date
+    date_fee_received: date
+    amount_paid: float
+
+class FictitiousCreateRequest(BaseVehicleRegistrationCreate):
+    master_record_id: int
+    model: str
+    vlp_class: str
+    amount_due: float
+    amount_received: float
+
+
+class MasterDropdownResponse(BaseModel):
+    id: str
+    vehicle_id_number: str
+    registered_owner: str
+
+class UnderCoverResponse(BaseModel):
+    id: int
+    master_record_id: str
+    vehicle_id_number: str
+    license_number: Optional[str]
+    registered_owner: Optional[str]
+    active_status: bool
+    
+    class Config:
+        from_attributes = True
+
+class FictitiousResponse(BaseModel):
+    id: int
+    master_record_id: str
+    vehicle_id_number: str  # auto-fetched from master
+    license_number: Optional[str]
+    registered_owner: Optional[str]
+    active_status: bool
+    
+    class Config:
+        from_attributes = True
+
+# bulk operations request schema
+class BulkActionRequest(BaseModel):
+    record_ids: List[int]  # Array of Master record primary keys
+    
+    class Config:
+        from_attributes = True
+
+class BulkActionResponse(BaseModel):
+    success_count: int
+    failed_count: int
+    failed_ids: List[int] = []
+    message: str
+    
+    class Config:
+        from_attributes = True
+
+class VehicleRegistrationResponse(BaseModel):
+    id: int
+    license_number: str
+    parent: str = Field(default="Vehicle Registration")
+    key: str = Field(alias="vehicle_id_number")    
+    vehicle_type: Optional[str] = Field(default=None, alias="type_vehicle")
+    owner_name: Optional[str] = Field(default=None, alias="registered_owner")
+    active_status: bool = True
+    
+    class Config:
+        from_attributes = True
+        populate_by_name = True  
+
+class VehicleRegistrationMasterResponse(VehicleRegistrationResponse):
+    approval_status: Optional[str] = None
+    list: str = Field(default="Master Record")
+    active_status: Optional[bool]
+    
+    class Config:
+        from_attributes = True
+
+# uc response
+class VehicleRegistrationUnderCoverResponse(VehicleRegistrationResponse):
+    list: str = Field(default="Undercover Record")
+    master_record_id : Optional[int] = None
+    active_status: Optional[bool]
+    
+    class Config:
+        from_attributes = True
+
+
+# fc response
+class VehicleRegistrationFictitiousResponse(VehicleRegistrationResponse):
+    list: str = Field(default="Fictitious Record")
+    master_record_id : Optional[int] = None
+    active_status: Optional[bool]
+    
+    class Config:
+        from_attributes = True
+

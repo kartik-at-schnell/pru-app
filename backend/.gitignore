@@ -3,8 +3,14 @@ __pycache__/
 *.py[cod]
 
 # Virtual environment
-pru_env/
+pru_venv/
 .env
+#Static/Uploads
+static/
+
+#populate db
+populate_db.py
+sample_data.py
 
 # Database files (if any)
 *.db
