@@ -17,6 +17,7 @@ class VehicleRegistrationMaster(BaseModel):
     make = Column(String(50))
     model = Column(String(100))
     year_model = Column(Integer)
+    year_sold = Column(Integer)
     body_type = Column(String(50))
     type_license = Column(String(50))
     type_vehicle = Column(String(50))
@@ -24,6 +25,7 @@ class VehicleRegistrationMaster(BaseModel):
 
     expiration_date = Column(Date)
     date_issued = Column(Date)
+    date_received = Column(Date)
     date_fee_received = Column(Date)
     amount_paid = Column(Numeric(10, 2))
     use_tax = Column(Numeric(10, 2))
@@ -32,9 +34,20 @@ class VehicleRegistrationMaster(BaseModel):
 
     approval_status = Column(String(20), default="pending")
     active_status = Column(Boolean, default=True)
-    record_type = Column(String(20), default="master")
+    record_type = Column(String(20), default="master", nullable=True)
     description = Column(Text)
     error_text = Column(Text)
+    link_to_folder = Column(String(500))    #sharePoint URI
+    document_id = Column(Integer)   #document id to link                       
+
+    #advance vehicle specs
+    cert_type = Column(String(50))                     #certificate type (CERTSTYPED)
+    mp = Column(String(50))                            #hp/mp
+    mo = Column(String(50))                            #Model code/MO
+    axl = Column(String(50))                           #axles
+    wc = Column(String(50))                            #weight class
+    cc_alco = Column(String(50))                       #CC/ALCO info
+    type_vehicle_use = Column(String(50)) 
 
     contacts = relationship("VehicleRegistrationContact", back_populates="master_record")
     reciprocal_issued = relationship("VehicleRegistrationReciprocalIssued", back_populates="master_record")
@@ -59,17 +72,26 @@ class VehicleRegistrationUnderCover(BaseModel):
     zip_code = Column(String(10))
 
     make = Column(String(50))
+    model = Column(String(100))
     year_model = Column(Integer)
     class_type = Column(String(50))
     type_license = Column(String(50))
+    body_type = Column(String(50))
+    type_vehicle = Column(String(50))
+    category = Column(String(50))
 
     expiration_date = Column(Date)
     date_issued = Column(Date)
+    date_received = Column(Date)
     date_fee_received = Column(Date)
     amount_paid = Column(Numeric(10, 2))
+    use_tax = Column(Numeric(10, 2))
+    sticker_issued = Column(String(50))
+    sticker_numbers = Column(String(100))
 
     active_status = Column(Boolean, default=True)
     error_text = Column(Text)
+    description = Column(Text)
 
     master_record = relationship("VehicleRegistrationMaster", back_populates="undercover_records")
     trap_info = relationship("VehicleRegistrationUnderCoverTrapInfo", back_populates="undercover_record")
@@ -94,12 +116,24 @@ class VehicleRegistrationFictitious(BaseModel):
     model = Column(String(100))
     year_model = Column(Integer)
     vlp_class = Column(String(50))
+    body_type = Column(String(50))
+    type_license = Column(String(50))
+    type_vehicle = Column(String(50))
+    category = Column(String(50))  
 
+    date_issued = Column(Date)
+    expiration_date = Column(Date) 
+    date_fee_received = Column(Date)    
+    amount_paid = Column(Numeric(10, 2))                
     amount_due = Column(Numeric(10, 2))
     amount_received = Column(Numeric(10, 2))
+    use_tax = Column(Numeric(10, 2))
+    sticker_issued = Column(String(50))
+    sticker_numbers = Column(String(100))
 
     active_status = Column(Boolean, default=True)
     error_text = Column(Text)
+    description = Column(Text)                         
 
     master_record = relationship("VehicleRegistrationMaster", back_populates="fictitious_records")
     trap_info = relationship("VehicleRegistrationFictitiousTrapInfo", back_populates="fictitious_record")
