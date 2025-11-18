@@ -17,7 +17,6 @@ from app.schemas.vehicle_registration_schema import(
     FictitiousCreateRequest,
     UnderCoverCreateRequest,
     VehicleRegistrationFictitiousResponse,
-    VehicleRegistrationMaster,
     VehicleRegistrationMasterBase,
     VehicleRegistrationMasterDetails,
     VehicleRegistrationMasterResponse,
@@ -112,12 +111,23 @@ def list_vehicles(
 
 
 #update
-@router.put("/{record_id}", response_model=ApiResponse[VehicleRegistrationMaster])
-def update_vehicle(record_id: str, update_data: VehicleRegistrationMasterBase, db: Session = Depends(get_db), current_user: user_models.User = Depends(get_current_user)):
+router.put("/{record_id}", response_model=ApiResponse[VehicleRegistrationMasterResponse])
+def update_vehicle(
+    record_id: int,  # Changed from str to int
+    update_data: VehicleRegistrationMasterBase,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
     updated = update_vehicle_record(db, record_id, update_data)
     if not updated:
         raise HTTPException(status_code=404, detail="Vehicle record not found")
-    return ApiResponse[VehicleRegistrationMaster](data=updated, message="Record updated successfully")
+    
+    data = VehicleRegistrationMasterResponse.model_validate(updated)
+    return ApiResponse(
+        status="success",
+        message=f"Record {record_id} updated successfully",
+        data=data)
+    
 
 # Details endpoint
 @router.get("/{master_id}/details", response_model=ApiResponse[VehicleRegistrationMasterDetails])

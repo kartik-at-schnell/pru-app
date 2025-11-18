@@ -293,12 +293,40 @@ class BulkActionResponse(BaseModel):
 class VehicleRegistrationResponse(BaseModel):
     id: int
     license_number: str
-    parent: str = Field(default="Vehicle Registration")
-    key: str = Field(alias="vehicle_id_number")    
-    vehicle_type: Optional[str] = Field(default=None, alias="type_vehicle")
-    owner_name: Optional[str] = Field(default=None, alias="registered_owner")
-    active_status: bool = True
-    
+    vehicle_id_number: str
+    active_status: bool
+    registered_owner: str
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    make: Optional[str] = None
+    year_model: Optional[int] = None
+    class_type: Optional[str] = None
+    type_license: Optional[str] = None
+    type_vehicle: Optional[str] = None
+    model: Optional[str] = None
+    body_type: Optional[str] = None
+    category: Optional[str] = None
+    # document_id = Optional[int] = None
+    error_text: Optional[str] = None
+
+    created_at: date
+    updated_at: date
+    date_recieved: date
+    date_issued: date
+    expiration_date: date
+    date_fee_recieved: date
+    amount_paid: Optional[int] = None
+    amount_due: Optional[int] = None
+    amount_recieved: Optional[int] = None
+    use_tax: Optional[int] = None
+    sticker_issued: Optional[str] = None
+    sticker_numbers: Optional[str] = None
+    created_by: Optional[str] = None
+    updated_by: Optional[str] = None
+    description: Optional[str] = None
+    parent: str = Field(default="Vehicle Registration")    
     class Config:
         from_attributes = True
         populate_by_name = True  
