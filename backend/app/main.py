@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import APIRouter, FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -11,6 +11,8 @@ from app.api.routes import auth_routes
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import document_routes
+from app.api.routes import driving_license_routes
+from app.security import get_current_user
 
 
 app = FastAPI()
@@ -24,6 +26,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+router = APIRouter(
+    prefix="/api",
+    dependencies=[Depends(get_current_user)]
+)
+
 @app.get("/")
 async def root():
     return {"message": "PRU API Live"}
@@ -34,10 +41,14 @@ async def health():
         "status": 200,
         "message": "Server Running"
     }
-app.include_router(document_routes.router, prefix="/api", tags=["Document Library"])
-app.include_router(vehicle_registration_routes.router, prefix="/api")
-app.include_router(action_routes.router, prefix="/api")
-app.include_router(dashboard_routes.router, prefix="/api")
+
+router.include_router(document_routes.router)
+router.include_router(vehicle_registration_routes.router)
+router.include_router(driving_license_routes.router)
+router.include_router(action_routes.router)
+router.include_router(dashboard_routes.router)
+
+app.include_router(router)
 
 app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
 

@@ -19,9 +19,11 @@ class DriverLicenseOriginalRecord(BaseModel):
     contact = Column(String(100))
     date_issued = Column(Date)
     modified = Column(DateTime(timezone=True))
+    approval_status = Column(Boolean)
 
     # relationship
     contacts = relationship("DriverLicenseContact", back_populates="original_record")
+    fictitious_traps = relationship("DriverLicenseFictitiousTrap", back_populates="original_record")
 
 
 # dl contact
@@ -66,6 +68,9 @@ class DriverLicenseFictitiousTrap(BaseModel):
     __tablename__ = "driver_license_fictitious_trap"
 
     id = Column(Integer, primary_key=True, index=True)
+
+    #fk
+    original_record_id = Column(Integer, ForeignKey("driver_license.id"), nullable=True)
     
     date = Column(Date) 
     number = Column(String(50)) 
@@ -95,3 +100,5 @@ class DriverLicenseFictitiousTrap(BaseModel):
     item_is_record = Column(Boolean) 
     app_created_by = Column(String(100)) 
     app_modified_by = Column(String(100)) 
+
+    original_record = relationship("DriverLicenseOriginalRecord", back_populates="fictitious_traps")
