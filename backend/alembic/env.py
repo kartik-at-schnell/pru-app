@@ -11,6 +11,7 @@ from app.database import Base
 from app.models import *  # Import all models
 # from app.models.user_models import * # i am definng this explicitly due to a bug
 from app.models.document_library import *
+from app.models.driving_license import *
 
 # Alembic Config object
 config = context.config
