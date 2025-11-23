@@ -8,7 +8,7 @@ class DriverLicenseOriginalRecord(BaseModel):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    status = Column(String(50))
+    active_status = Column(Boolean, default=True)
     tln = Column(String(50)) 
     tfn = Column(String(50)) 
     tdl = Column(String(50)) 
@@ -19,7 +19,7 @@ class DriverLicenseOriginalRecord(BaseModel):
     contact = Column(String(100))
     date_issued = Column(Date)
     modified = Column(DateTime(timezone=True))
-    approval_status = Column(Boolean)
+    approval_status = Column(String(50), default="pending")
 
     # relationship
     contacts = relationship("DriverLicenseContact", back_populates="original_record")

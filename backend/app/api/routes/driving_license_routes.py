@@ -39,7 +39,7 @@ def create_original_record(
 def get_all_records(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    status: Optional[str] = None,
+    active_status: Optional[str] = None,
     approval_status: Optional[str] = None,
     active_only: bool = True,
     db: Session = Depends(get_db)
@@ -48,7 +48,7 @@ def get_all_records(
         db=db,
         skip=skip,
         limit=limit,
-        status=status,
+        active_status=active_status,
         approval_status=approval_status,
         active_only=active_only
     )
