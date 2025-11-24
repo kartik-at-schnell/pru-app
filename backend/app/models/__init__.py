@@ -10,7 +10,9 @@ from .vehicle_registration import (
     VehicleRegistrationReciprocalReceived
 )
 
-from .user_models import user_roles_table, User, Role
+#from .user_models import user_roles_table, User, Role
+from .user_models import user_roles_table, User
+from .role import Role
 
 from .document_library import DocumentLibrary, DocumentAuditLog
 

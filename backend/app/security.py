@@ -12,7 +12,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.crud import user_crud
 from app.models import user_models
-from app.models.user_models import Role
+#from app.models.user_models import Role
+from app.models.role import Role
+
 
 load_dotenv()
 

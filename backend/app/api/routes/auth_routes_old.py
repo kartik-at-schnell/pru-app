@@ -9,49 +9,31 @@ from app.security import (
     create_access_token,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
+# from app.utils.hash_password import verify_password, hash_password
 from app.schemas import user_schema
 
-
 router = APIRouter(tags=["Authentication"])
-
 
 @router.post("/login", response_model=user_schema.Token)
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    """
-    - No password required
-    - Accepts only email (Azure AD user email)
-    - Returns JWT token usable for RBAC authorization
-    """
-
-    # Email is passed as "username" in OAuth2 form
-    user = user_crud.get_user_by_email(db, email=form_data.username)
-
-    if not user:
+    user = user_crud.get_user_by_email(db, email=form_data.username) # form_data uses username, so username = email
+    if not user or user.hashed_password != form_data.password:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User does not exist in database"
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-
     if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
 
-    # Bypass password requirement (Azure AD users don't have passwords)
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email},
-        expires_delta=access_token_expires
+        data={"sub": user.email}, expires_delta=access_token_expires
     )
-
-    return {
-        "access_token": access_token,
-        "token_type": "bearer"
-    }
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.post("/register", response_model=user_schema.User, status_code=status.HTTP_201_CREATED)
@@ -59,15 +41,11 @@ def register_new_user(
     user_in: user_schema.UserCreate,
     db: Session = Depends(get_db)
 ):
-    """
-    Normal registration for creating local DB users (optional)
-    """
     existing_user = user_crud.get_user_by_email(db, email=user_in.email)
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered",
         )
-
     new_user = user_crud.create_user(db=db, user=user_in)
     return new_user
