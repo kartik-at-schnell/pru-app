@@ -14,13 +14,21 @@ def get_current_user(
     return user
 
 
-def require_role(role: str):
+def require_role(*roles):
+    roles = {r.lower() for r in roles}  # normalize list
+    
     def checker(user = Depends(get_current_user)):
         user_roles = {r.name.lower() for r in user.roles}
 
-        if role.lower() not in user_roles:
+        print("=== RBAC DEBUG ===")
+        print("User:", user.email)
+        print("User Roles:", user_roles)
+        print("Allowed Roles:", roles)
+        print("==================")
+
+        if not user_roles.intersection(roles):
             raise HTTPException(status_code=403, detail="Not enough permissions")
 
-        return True
+        return user  # return user, not True
 
     return checker

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional, Union
-from app.api.dependencies.rbac import require_role
 
 from app.database import get_db
+from app.api.dependencies.rbac import require_role
 from app.crud.vehicle_registration_crud import (
     create_master_record,
     create_undercover_record,
@@ -11,7 +11,7 @@ from app.crud.vehicle_registration_crud import (
     get_all_masters_for_dropdown,
     get_all_vehicles,
     get_vehicle_master_details,
-    update_vehicle_record
+    update_vehicle_record,
 )
 
 from app.schemas.vehicle_registration_schema import (
@@ -25,14 +25,15 @@ from app.schemas.vehicle_registration_schema import (
     MasterCreateRequest,
 )
 
-from app.utils.auth_dependencies import get_current_user, require_roles
 from app.schemas.base_schema import ApiResponse
 
 router = APIRouter(prefix="/vehicle-registration", tags=["Vehicle Registration"])
 
-# ---------------- CREATE (Admin only) ------------------
+
+# ---------------- CREATE (admin only) ------------------
 @router.post(
     "/create",
+    dependencies=[Depends(require_role("admin"))],  # FIXED
     response_model=ApiResponse[Union[
         VehicleRegistrationMasterResponse,
         VehicleRegistrationUnderCoverResponse,
@@ -42,52 +43,42 @@ router = APIRouter(prefix="/vehicle-registration", tags=["Vehicle Registration"]
 def create_vehicle_record(
     record_type: str = Query(..., regex="^(master|undercover|fictitious)$"),
     db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["Admin"])),
     payload: Union[
         MasterCreateRequest,
         UnderCoverCreateRequest,
         FictitiousCreateRequest
     ] = Body(...)
 ):
-    try:
-        if record_type == "master":
-            result = create_master_record(db, payload)
-            data = VehicleRegistrationMasterResponse.model_validate(result)
-            return ApiResponse(
-                status="success",
-                message=f"Master record created successfully with ID {result.id}",
-                data=data
-            )
 
-        elif record_type == "undercover":
-            result = create_undercover_record(db, payload)
-            data = VehicleRegistrationUnderCoverResponse.model_validate(result)
-            return ApiResponse(
-                status="success",
-                message=f"Undercover record created successfully with ID {result.id}",
-                data=data
-            )
+    if record_type == "master":
+        result = create_master_record(db, payload)
+        return ApiResponse(
+            status="success",
+            message=f"Master record created with ID {result.id}",
+            data=VehicleRegistrationMasterResponse.model_validate(result)
+        )
 
-        elif record_type == "fictitious":
-            result = create_fictitious_record(db, payload)
-            data = VehicleRegistrationFictitiousResponse.model_validate(result)
-            return ApiResponse(
-                status="success",
-                message=f"Fictitious record created successfully with ID {result.id}",
-                data=data
-            )
+    elif record_type == "undercover":
+        result = create_undercover_record(db, payload)
+        return ApiResponse(
+            status="success",
+            message=f"Undercover record created with ID {result.id}",
+            data=VehicleRegistrationUnderCoverResponse.model_validate(result)
+        )
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create record: {str(e)}"
+    elif record_type == "fictitious":
+        result = create_fictitious_record(db, payload)
+        return ApiResponse(
+            status="success",
+            message=f"Fictitious record created with ID {result.id}",
+            data=VehicleRegistrationFictitiousResponse.model_validate(result)
         )
 
 
-# ---------------- LIST (Admin, Manager, Supervisor) ------------------
+# ---------------- LIST (admin + operator) ------------------
 @router.get(
-    "/",
-    dependencies=[Depends(require_role("admin"))],
+    "/", 
+    dependencies=[Depends(require_role("admin", "operator"))], 
     response_model=ApiResponse[List[Union[
         VehicleRegistrationMasterResponse,
         VehicleRegistrationUnderCoverResponse,
@@ -97,148 +88,77 @@ def create_vehicle_record(
 def list_vehicles(
     skip: int = 0,
     limit: int = 25,
-    search: Optional[str] = Query(None, description="Search by license number"),
-    record_type: Optional[str] = Query(None, description="master, undercover, or fictitious"),
-    approval_status: Optional[str] = Query(None, description="pending, approved, rejected, on_hold"),
-    db: Session = Depends(get_db),
-  #  current_user=Depends(require_roles(["Admin"]))
+    search: Optional[str] = None,
+    record_type: Optional[str] = None,
+    approval_status: Optional[str] = None,
+    db: Session = Depends(get_db)
 ):
-    try:
-        vehicle_list = get_all_vehicles(
-            db, skip=skip, limit=limit, search=search,
-            record_type=record_type, approval_status=approval_status
-        )
 
-        if record_type == "undercover":
-            data = [VehicleRegistrationUnderCoverResponse.model_validate(v) for v in vehicle_list]
-        elif record_type == "fictitious":
-            data = [VehicleRegistrationFictitiousResponse.model_validate(v) for v in vehicle_list]
-        else:
-            data = [VehicleRegistrationMasterResponse.model_validate(v) for v in vehicle_list]
+    vehicle_list = get_all_vehicles(
+        db, skip=skip, limit=limit, search=search,
+        record_type=record_type, approval_status=approval_status
+    )
 
-        return ApiResponse(data=data)
+    if record_type == "undercover":
+        data = [VehicleRegistrationUnderCoverResponse.model_validate(v) for v in vehicle_list]
+    elif record_type == "fictitious":
+        data = [VehicleRegistrationFictitiousResponse.model_validate(v) for v in vehicle_list]
+    else:
+        data = [VehicleRegistrationMasterResponse.model_validate(v) for v in vehicle_list]
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve records: {e}"
-        )
+    return ApiResponse(data=data)
 
 
-# ---------------- UPDATE (Admin + Manager) ------------------
-@router.put("/{record_id}", response_model=ApiResponse[VehicleRegistrationMasterResponse])
+# ---------------- UPDATE (admin + operator) ------------------
+@router.put(
+    "/{record_id}",
+    dependencies=[Depends(require_role("admin", "operator"))],  # FIXED
+    response_model=ApiResponse[VehicleRegistrationMasterResponse]
+)
 def update_vehicle(
     record_id: int,
     update_data: VehicleRegistrationMasterBase,
-    db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["Admin", "Manager"]))
+    db: Session = Depends(get_db)
 ):
+
     updated = update_vehicle_record(db, record_id, update_data)
     if not updated:
-        raise HTTPException(status_code=404, detail="Vehicle record not found")
+        raise HTTPException(404, "Vehicle record not found")
 
-    data = VehicleRegistrationMasterResponse.model_validate(updated)
     return ApiResponse(
         status="success",
         message=f"Record {record_id} updated successfully",
-        data=data
+        data=VehicleRegistrationMasterResponse.model_validate(updated)
     )
 
 
-# ---------------- DETAILS (Admin, Manager, Supervisor) ------------------
-@router.get("/{master_id}/details", response_model=ApiResponse[VehicleRegistrationMasterDetails])
+# ---------------- DETAILS ------------------
+@router.get(
+    "/{master_id}/details",
+    dependencies=[Depends(require_role("admin", "operator"))],  # FIXED
+    response_model=ApiResponse[VehicleRegistrationMasterDetails]
+)
 def get_master_record_details(
     master_id: str,
-    db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["Admin", "Manager", "Supervisor"]))
+    db: Session = Depends(get_db)
 ):
+
     db_record = get_vehicle_master_details(db=db, master_id=master_id)
 
     if db_record is None:
-        raise HTTPException(status_code=404, detail="Vehicle Master Record not found")
+        raise HTTPException(404, "Vehicle Master Record not found")
 
     return ApiResponse(data=db_record)
 
 
-# ---------------- DROPDOWN (Admin, Manager, Supervisor) ------------------
-@router.get("/masters/dropdown")
+# ---------------- DROPDOWN ------------------
+@router.get(
+    "/masters/dropdown",
+    dependencies=[Depends(require_role("admin", "operator"))]  # FIXED
+)
 def get_masters_dropdown(
-    db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["Admin", "Manager", "Supervisor"]))
+    db: Session = Depends(get_db)
 ):
+
     masters = get_all_masters_for_dropdown(db)
     return [{"id": m[0], "vin": m[1], "owner": m[2]} for m in masters]
-
-
-
-# @router.get("/undercover/master/{master_id}")
-# def get_uc_by_master(
-#     master_id: str,
-#     db: Session = Depends(get_db),
-#     current_user = Depends(get_current_user)
-# ):
-#     records = get_undercover_by_master(db, master_id)
-#     return {"master_id": master_id, "count": len(records), "records": records}
-
-# @router.post("/undercover/{uc_id}/mark-active")
-# def mark_uc_active(
-#     uc_id: int,
-#     db: Session = Depends(get_db),
-#     current_user = Depends(get_current_user)
-# ):
-#     mark_undercover_active(db, uc_id)
-#     return {"status": "marked active", "uc_id": uc_id}
-
-# @router.post("/undercover/{uc_id}/mark-inactive")
-# def mark_uc_inactive(
-#     uc_id: int,
-#     db: Session = Depends(get_db),
-#     current_user = Depends(get_current_user)
-# ):
-#     mark_undercover_inactive(db, uc_id)
-#     return {"status": "marked inactive", "uc_id": uc_id}
-
-
-# @router.get("/fictitious/master/{master_id}")
-# def get_fc_by_master(
-#     master_id: str,
-#     db: Session = Depends(get_db),
-#     current_user = Depends(get_current_user)
-# ):
-#     records = get_fictitious_by_master(db, master_id)
-#     return {"master_id": master_id, "count": len(records), "records": records}
-
-# @router.post("/fictitious/{fc_id}/mark-active")
-# def mark_fc_active(
-#     fc_id: int,
-#     db: Session = Depends(get_db),
-#     current_user = Depends(get_current_user)
-# ):
-#     mark_fictitious_active(db, fc_id)
-#     return {"status": "marked active", "fc_id": fc_id}
-
-# @router.post("/fictitious/{fc_id}/mark-inactive")
-# def mark_fc_inactive(
-#     fc_id: int,
-#     db: Session = Depends(get_db),
-#     current_user = Depends(get_current_user)
-# ):
-#     mark_fictitious_inactive(db, fc_id)
-#     return {"status": "marked inactive", "fc_id": fc_id}
-
-
-# # bulk delete
-# @router.delete("/bulk-delete", response_model=ApiResponse[BulkActionResponse])
-# def bulk_delete_route(
-#     request: BulkActionRequest,
-#     db: Session = Depends(get_db),
-#     current_user: user_models.User = Depends(get_current_user)
-# ):
-#     deleted_count = bulk_delete(db, request.record_ids)
-    
-#     response_data = BulkActionResponse(
-#         success_count=deleted_count,
-#         failed_count=len(request.record_ids) - deleted_count,
-#         message=f"Successfully deleted {deleted_count} records"
-#     )
-#     return ApiResponse[BulkActionResponse](data=response_data)
