@@ -264,7 +264,29 @@ def restore_record(db: Session, record_id: int):
 
 # CONTACT
 
-# get al
+#get all (across all recs)
+def get_all_contacts(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100
+):
+    contacts = db.query(DriverLicenseContact).order_by(
+        DriverLicenseContact.created_at.desc()
+    ).offset(skip).limit(limit).all()
+    return contacts
+
+# detailed contact 
+def get_contact_by_id(db: Session, contact_id: int):
+    contact = db.query(DriverLicenseContact).filter(
+        DriverLicenseContact.id == contact_id
+    ).first()
+    
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    return contact
+
+# get all for one record
 def get_contacts_by_record(db: Session, record_id: int):
     
     contacts = db.query(DriverLicenseContact).filter(
@@ -312,6 +334,28 @@ def delete_contact(db: Session, contact_id: int):
 # FICTITIOUS TRAP
 
 # get all
+def get_all_traps(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100
+):
+    traps = db.query(DriverLicenseFictitiousTrap).order_by(
+        DriverLicenseFictitiousTrap.created_at.desc()
+    ).offset(skip).limit(limit).all()
+    return traps
+
+# single detailed record
+def get_trap_by_id(db: Session, trap_id: int):
+    trap = db.query(DriverLicenseFictitiousTrap).filter(
+        DriverLicenseFictitiousTrap.id == trap_id
+    ).first()
+    
+    if not trap:
+        raise HTTPException(status_code=404, detail="Fictitious trap not found")
+    
+    return trap
+
+# get all for one record
 def get_traps_by_record(db: Session, record_id: int):
     
     traps = db.query(DriverLicenseFictitiousTrap).filter(
@@ -319,6 +363,23 @@ def get_traps_by_record(db: Session, record_id: int):
     ).all()
     
     return traps
+
+#update 
+def update_trap(db: Session, trap_id: int, payload: DriverLicenseFictitiousTrapCreate):
+    trap = db.query(DriverLicenseFictitiousTrap).filter(
+        DriverLicenseFictitiousTrap.id == trap_id
+    ).first()
+    
+    if not trap:
+        raise HTTPException(status_code=404, detail="Fictitious trap not found")
+    
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(trap, field, value)
+    
+    db.commit()
+    db.refresh(trap)
+    return trap
 
 # delete
 def delete_trap(db: Session, trap_id: int):
