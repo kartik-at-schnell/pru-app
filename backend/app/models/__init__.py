@@ -12,6 +12,10 @@ from .vehicle_registration import (
 
 from .user_models import user_roles_table, User, Role
 
+from .document_library import DocumentLibrary, DocumentAuditLog
+
+from .driving_license import (DriverLicenseOriginalRecord, DriverLicenseContact, DriverLicenseFictitiousTrap)
+
 # export all models for easy importing
 __all__ = [
     "Base",
@@ -28,5 +32,10 @@ __all__ = [
     "VehicleRegistrationReciprocalReceived",
     "User",
     "Role",
-    "user_roles_table"
+    "user_roles_table",
+    "DocumentLibrary",
+    "DocumentAuditLog",
+    "DriverLicenseOriginalRecord",
+    "DriverLicenseContact",
+    "DriverLicenseFictitiousTrap"
 ]

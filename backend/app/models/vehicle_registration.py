@@ -7,6 +7,7 @@ class VehicleRegistrationMaster(BaseModel):
 
     id = Column(Integer, primary_key=True, index=True, nullable=False)
     license_number = Column(String(20), unique=True, index=True)
+    exempted_license_plate = Column(String(50))
     vehicle_id_number = Column(String(20), index=True)
     registered_owner = Column(String(200))
     address = Column(Text)
@@ -14,27 +15,48 @@ class VehicleRegistrationMaster(BaseModel):
     state = Column(String(50), default="California")
     zip_code = Column(String(10))
 
+    cls = Column(String(50))
+    unladen_wt = Column(String(50))
+    # related_undercover
+    # related_fictitious
+
     make = Column(String(50))
     model = Column(String(100))
     year_model = Column(Integer)
+    year_sold = Column(Integer)
     body_type = Column(String(50))
     type_license = Column(String(50))
     type_vehicle = Column(String(50))
+    # vlp_class = Column(String(50))
     category = Column(String(50))
 
     expiration_date = Column(Date)
     date_issued = Column(Date)
+    date_received = Column(Date)
     date_fee_received = Column(Date)
     amount_paid = Column(Numeric(10, 2))
+    amount_due = Column(Numeric(10, 2))
+    amount_received = Column(Numeric(10, 2))
     use_tax = Column(Numeric(10, 2))
     sticker_issued = Column(String(50))
     sticker_numbers = Column(String(100))
 
     approval_status = Column(String(20), default="pending")
     active_status = Column(Boolean, default=True)
-    record_type = Column(String(20), default="master")
+    record_type = Column(String(20), default="master", nullable=True)
     description = Column(Text)
     error_text = Column(Text)
+    link_to_folder = Column(String(500))    #s3 URI to pdf, i assume
+    document_id = Column(Integer)   #document id on s3                      
+
+    #advance vehicle specs
+    cert_type = Column(String(50))                     #certificate type (CERTSTYPED)
+    mp = Column(String(50))                            #hp/mp
+    mo = Column(String(50))                            #Model code/MO
+    axl = Column(String(50))                           #axles
+    wc = Column(String(50))                            #weight class
+    cc_alco = Column(String(50))                       #CC/ALCO info
+    type_vehicle_use = Column(String(50)) 
 
     contacts = relationship("VehicleRegistrationContact", back_populates="master_record")
     reciprocal_issued = relationship("VehicleRegistrationReciprocalIssued", back_populates="master_record")
@@ -59,17 +81,41 @@ class VehicleRegistrationUnderCover(BaseModel):
     zip_code = Column(String(10))
 
     make = Column(String(50))
+    model = Column(String(100))
     year_model = Column(Integer)
+    year_sold = Column(Integer)
+    # vlp_class = Column(String(50))
     class_type = Column(String(50))
     type_license = Column(String(50))
+    body_type = Column(String(50))
+    type_vehicle = Column(String(50))
+    category = Column(String(50))
+
+    mp = Column(String(50))
+    mo = Column(String(50))
+    axl = Column(String(50))
+    wc = Column(String(50))
+    unladen_wt = Column(String(50))
+    paper_issue_code = Column(String(50))
+    cert_type = Column(String(50))
+
+    link_to_folder = Column(Text)
+    document_id = Column(String(100))
 
     expiration_date = Column(Date)
     date_issued = Column(Date)
+    date_received = Column(Date)
     date_fee_received = Column(Date)
     amount_paid = Column(Numeric(10, 2))
+    use_tax = Column(Numeric(10, 2))
+    amount_due = Column(Numeric(10, 2))
+    amount_received = Column(Numeric(10, 2))
+    sticker_issued = Column(String(50))
+    sticker_numbers = Column(String(100))
 
     active_status = Column(Boolean, default=True)
     error_text = Column(Text)
+    description = Column(Text)
 
     master_record = relationship("VehicleRegistrationMaster", back_populates="undercover_records")
     trap_info = relationship("VehicleRegistrationUnderCoverTrapInfo", back_populates="undercover_record")
@@ -94,12 +140,34 @@ class VehicleRegistrationFictitious(BaseModel):
     model = Column(String(100))
     year_model = Column(Integer)
     vlp_class = Column(String(50))
+    body_type = Column(String(50))
+    type_license = Column(String(50))
+    type_vehicle = Column(String(50))
+    category = Column(String(50))  
 
+    year_sold = Column(Integer)
+    date_issued = Column(Date)
+    expiration_date = Column(Date) 
+    date_fee_received = Column(Date)    
+    amount_paid = Column(Numeric(10, 2))                
     amount_due = Column(Numeric(10, 2))
     amount_received = Column(Numeric(10, 2))
+    use_tax = Column(Numeric(10, 2))
+    sticker_issued = Column(String(50))
+    sticker_numbers = Column(String(100))
+
+    mp = Column(String(50))
+    mo = Column(String(50))
+    axl = Column(String(50))
+    wc = Column(String(50))
+    unladen_wt = Column(String(50))
+    paper_issue_code = Column(String(50))
+    cert_type = Column(String(50))
+    link_to_folder = Column(Text)
 
     active_status = Column(Boolean, default=True)
     error_text = Column(Text)
+    description = Column(Text)                         
 
     master_record = relationship("VehicleRegistrationMaster", back_populates="fictitious_records")
     trap_info = relationship("VehicleRegistrationFictitiousTrapInfo", back_populates="fictitious_record")
@@ -127,8 +195,11 @@ class VehicleRegistrationContact(BaseModel):
     department = Column(String(100))
     email = Column(String(100))
     phone_number = Column(String(20))
+    address = Column(Text)
     alt_contact_1 = Column(String(200))
     alt_contact_2 = Column(String(200))
+    alt_contact_3 = Column(String(200))
+    alt_contact_4 = Column(String(200))
 
     master_record = relationship("VehicleRegistrationMaster", back_populates="contacts")
 

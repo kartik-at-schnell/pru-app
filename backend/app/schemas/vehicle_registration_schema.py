@@ -1,7 +1,9 @@
+from decimal import Decimal
 from pydantic import BaseModel
 from datetime import datetime, date
 from typing import Optional, List
 from pydantic import Field, field_validator
+from sqlalchemy import func
 
 class Config:
     from_attributes = True #tells orm can access attributes
@@ -215,36 +217,36 @@ class VehicleRegistrationFictitiousTrapInfoCreateBody(BaseModel):
 class BaseVehicleRegistrationCreate(BaseModel):
     license_number: str
     registered_owner: str
-    vehicle_id_number: Optional[str] = None
-    address: str
-    city: str
-    state: str
-    zip_code: str
-    make: str
-    year_model: int
-    active_status: bool = True
+    vehicle_id_number: str
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    make: Optional[str] = None
+    year_model: Optional[str] = None
+    active_status: Optional[bool] = True
 
 class MasterCreateRequest(BaseVehicleRegistrationCreate):
-    model: str
-    body_type: str
-    type_license: str
-    type_vehicle: str
+    model: Optional[str] = None
+    body_type: Optional[str]
+    type_license: Optional[str] = None
+    type_vehicle: Optional[str] = None
 
 class UnderCoverCreateRequest(BaseVehicleRegistrationCreate):
     master_record_id: int
-    class_type: str
-    type_license: str
-    expiration_date: date
-    date_issued: date
-    date_fee_received: date
-    amount_paid: float
+    class_type: Optional[str] = None
+    type_license: Optional[str] = None
+    expiration_date: Optional[date] = None
+    date_issued: Optional[date] = None
+    date_fee_received: Optional[date] = func.now()
+    amount_paid: Optional[float] = None
 
 class FictitiousCreateRequest(BaseVehicleRegistrationCreate):
     master_record_id: int
-    model: str
+    model: Optional[str] = None
     vlp_class: str
-    amount_due: float
-    amount_received: float
+    amount_due: Optional[float] = None
+    amount_received: Optional[float] = None
 
 
 class MasterDropdownResponse(BaseModel):
@@ -293,12 +295,40 @@ class BulkActionResponse(BaseModel):
 class VehicleRegistrationResponse(BaseModel):
     id: int
     license_number: str
-    parent: str = Field(default="Vehicle Registration")
-    key: str = Field(alias="vehicle_id_number")    
-    vehicle_type: Optional[str] = Field(default=None, alias="type_vehicle")
-    owner_name: Optional[str] = Field(default=None, alias="registered_owner")
-    active_status: bool = True
-    
+    vehicle_id_number: str
+    active_status: bool
+    registered_owner: str
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    make: Optional[str] = None
+    year_model: Optional[int] = None
+    class_type: Optional[str] = None
+    type_license: Optional[str] = None
+    type_vehicle: Optional[str] = None
+    model: Optional[str] = None
+    body_type: Optional[str] = None
+    category: Optional[str] = None
+    # document_id = Optional[int] = None
+    error_text: Optional[str] = None
+
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    date_recieved: Optional[date] = None
+    date_issued: Optional[date] = None
+    expiration_date: Optional[date] = None
+    date_fee_recieved: Optional[date] = None
+    amount_paid: Optional[Decimal] = None
+    amount_due: Optional[Decimal] = None
+    amount_recieved: Optional[Decimal] = None
+    use_tax: Optional[int] = None
+    sticker_issued: Optional[str] = None
+    sticker_numbers: Optional[str] = None
+    created_by: Optional[str] = None
+    updated_by: Optional[str] = None
+    description: Optional[str] = None
+    parent: str = Field(default="Vehicle Registration")    
     class Config:
         from_attributes = True
         populate_by_name = True  
