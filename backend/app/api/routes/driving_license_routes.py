@@ -18,11 +18,11 @@ from app.schemas.driving_license_schema import (
     RecordsCountResponse
 )
 
+from app.schemas.base_schema import ApiResponse
+
 router = APIRouter(prefix="/driver-license", tags=["Driver License"])
 
-
 # Main endpoints
-
 # crreate new
 @router.post("/create", response_model=DriverLicenseOriginalResponse)
 def create_original_record(
@@ -36,7 +36,7 @@ def create_original_record(
         raise HTTPException(status_code=400, detail=str(e))
 
 # get all records
-@router.get("/", response_model=List[DriverLicenseOriginalResponse])
+@router.get("/", response_model=ApiResponse[List[DriverLicenseOriginalResponse]])
 def get_all_records(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
@@ -49,11 +49,15 @@ def get_all_records(
         db=db,
         skip=skip,
         limit=limit,
-        status=status,
+        # status=status,
         approval_status=approval_status,
         active_only=active_only
     )
-    return records
+    return ApiResponse(
+        status="success",
+        message=f"Retrieved {len(records)} driver license records",
+        data=records
+    )
 
 # get detailed record
 @router.get("/{record_id}", response_model=DriverLicenseOriginalDetailResponse)
@@ -110,27 +114,33 @@ def hard_delete_record(
     result = crud.hard_delete_record(db, record_id)
     return result
 
-
 # CONTACT
-
 # global get all
-@router.get("/contacts/all", response_model=List[DriverLicenseContactResponse])
+@router.get("/contacts/all", response_model=ApiResponse[List[DriverLicenseContactResponse]])
 def get_all_contacts(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db)
 ):
     contacts = crud.get_all_contacts(db, skip=skip, limit=limit)
-    return contacts
+    return ApiResponse(
+        status="success",
+        message=f"Retrieved {len(contacts)} contacts",
+        data=contacts
+    )
 
 # get one by id
-@router.get("/contact/{contact_id}", response_model=DriverLicenseContactResponse)
+@router.get("/contact/{contact_id}", response_model=ApiResponse[DriverLicenseContactResponse])
 def get_contact_by_id(
     contact_id: int,
     db: Session = Depends(get_db)
 ):
     contact = crud.get_contact_by_id(db, contact_id)
-    return contact
+    return ApiResponse(
+        status="success",
+        message="Contact retrieved successfully",
+        data=contact
+    )
 
 # new
 @router.post("/{record_id}/contact", response_model=DriverLicenseContactResponse)
@@ -170,28 +180,33 @@ def delete_contact(
     result = crud.delete_contact(db, contact_id)
     return result
 
-
 # FICTITIOUS TRAP
-
 # get all, global
-@router.get("/traps/all", response_model=List[DriverLicenseFictitiousTrapResponse])
+@router.get("/traps/all", response_model=ApiResponse[List[DriverLicenseFictitiousTrapResponse]])
 def get_all_traps(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db)
 ):
     traps = crud.get_all_traps(db, skip=skip, limit=limit)
-    return traps
+    return ApiResponse(
+        status="success",
+        message=f"Retrieved {len(traps)} fictitious traps",
+        data=traps
+    )
 
 # get single
-@router.get("/trap/{trap_id}", response_model=DriverLicenseFictitiousTrapResponse)
+@router.get("/trap/{trap_id}", response_model=ApiResponse[DriverLicenseFictitiousTrapResponse])
 def get_trap_by_id(
     trap_id: int,
     db: Session = Depends(get_db)
 ):
     trap = crud.get_trap_by_id(db, trap_id)
-    return trap
-
+    return ApiResponse(
+        status="success",
+        message="Fictitious trap retrieved successfully",
+        data=trap
+    )
 
 # record-specific trap endpoints
 # create
