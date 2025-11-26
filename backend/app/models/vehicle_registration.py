@@ -179,7 +179,7 @@ class VehicleRegistrationContact(BaseModel):
  
     id = Column(Integer, primary_key=True, index=True)
     # master_record_id = Column(Integer, ForeignKey("vehicle_registration_master.id"))
- 
+    master_record_id = Column(Integer, nullable=False)
     contact_name = Column(String(200))
     department = Column(String(100))
     email = Column(String(100))

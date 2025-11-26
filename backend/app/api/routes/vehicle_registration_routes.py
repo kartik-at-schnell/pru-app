@@ -1,15 +1,20 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional, Union
-from app.crud.vehicle_registration_crud import  delete_vr_reciprocal_received, get_all_reciprocal_records, get_all_vr_reciprocal_received, update_vr_reciprocal_received
+from app import crud
+from app.crud.vehicle_registration_crud import get_all_contacts, get_contacts_by_master
+from app.crud.vehicle_registration_crud import  create_vr_contact, delete_vr_reciprocal_received, get_all_reciprocal_records, get_all_vr_reciprocal_received, update_vr_reciprocal_received
 from app.crud.vehicle_registration_crud import get_reciprocal_record_by_id
 from app.crud.vehicle_registration_crud import update_reciprocal_record 
 from app.crud.vehicle_registration_crud import delete_reciprocal_record
-from app.schemas.vehicle_registration_schema import VehicleRegistrationReciprocalIssuedUpdate, VehicleRegistrationReciprocalReceivedCreateBody, VehicleRegistrationReciprocalReceivedResponse 
+from app.schemas.vehicle_registration_schema import VRContactUpdate, VehicleRegistrationReciprocalIssuedUpdate
 from app.schemas.vehicle_registration_schema import (
     VRReciprocalReceivedCreate,
     VRReciprocalReceivedResponse,
-    VRReciprocalReceivedUpdate
+    VRReciprocalReceivedUpdate,
+    VRContactCreate,
+    VRContactResponse,
+    
 )
 from app.crud.vehicle_registration_crud import create_vr_reciprocal_received
 
@@ -334,3 +339,43 @@ def delete_reciprocal_received(
 ):
     delete_vr_reciprocal_received(db, record_id)
     return
+
+@router.post(
+    "/contact",
+    response_model=VRContactResponse
+)
+def create_contact(
+    payload: VRContactCreate,
+    db: Session = Depends(get_db)
+):
+    record = create_vr_contact(db, payload)
+    return VRContactResponse.model_validate(record)
+
+@router.get("/contacts", response_model=List[VRContactResponse])
+def list_all_contacts(db: Session = Depends(get_db)):
+    return get_all_contacts(db)
+
+
+@router.get("/contacts/{master_record_id}", response_model=List[VRContactResponse])
+def list_contacts_by_master(master_record_id: int, db: Session = Depends(get_db)):
+    contacts = get_contacts_by_master(db, master_record_id)
+    
+    if not contacts:
+        raise HTTPException(status_code=404, detail="No contacts found for this master_record_id")
+
+    return contacts
+@router.put("/contacts/{contact_id}", response_model=VRContactResponse)
+def update_contact_route(
+    contact_id: int,
+    payload: VRContactUpdate,
+    db: Session = Depends(get_db)
+):
+    from app.crud.vehicle_registration_crud import update_contact as update_contact_crud
+
+    updated = update_contact_crud(db, contact_id, payload)
+
+    if not updated:
+        raise HTTPException(status_code=404, detail="Contact not found")
+
+    return VRContactResponse.model_validate(updated)
+

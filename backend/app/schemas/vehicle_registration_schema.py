@@ -486,6 +486,54 @@ class VRReciprocalReceivedUpdate(BaseModel):
         from_attributes = True
 
 
+class VRContactCreate(BaseModel):
+    master_record_id: int
+    contact_name: Optional[str] = None
+    department: Optional[str] = None
+    email: Optional[str] = None
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+
+    alt_contact_1: Optional[str] = None
+    alt_contact_2: Optional[str] = None
+    alt_contact_3: Optional[str] = None
+    alt_contact_4: Optional[str] = None
+
+class VRContactUpdate(BaseModel):
+    contact_name: Optional[str] = None
+    department: Optional[str] = None
+    email: Optional[str] = None
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+
+    alt_contact_1: Optional[str] = None
+    alt_contact_2: Optional[str] = None
+    alt_contact_3: Optional[str] = None
+    alt_contact_4: Optional[str] = None
+
+class VRContactResponse(BaseModel):
+    id: int
+    master_record_id: int
+    contact_name: Optional[str]
+    department: Optional[str]
+    email: Optional[str]
+    phone_number: Optional[str]
+    address: Optional[str]
+    alt_contact_1: Optional[str]
+    alt_contact_2: Optional[str]
+    alt_contact_3: Optional[str]
+    alt_contact_4: Optional[str]
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+
+
+        
+
 # class VehicleRegistrationReciprocalReceivedResponse(BaseModel):
 #     id: int
 #     master_record_id: int

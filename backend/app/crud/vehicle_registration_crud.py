@@ -1,11 +1,17 @@
 from app.models import VehicleRegistrationReciprocalIssued, VehicleRegistrationMaster
 from app.schemas.vehicle_registration_schema import (
+    VRContactCreate,
+    VRContactUpdate,
     VRReciprocalReceivedCreate,
     VRReciprocalReceivedUpdate,
+    VRContactUpdate,
+    VRContactResponse,
     VehicleRegistrationReciprocalIssuedCreateBody,
     VehicleRegistrationReciprocalIssuedUpdate,
     VehicleRegistrationReciprocalReceivedCreateBody 
 )
+
+
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
@@ -540,3 +546,45 @@ def delete_vr_reciprocal_received(db: Session, record_id: int):
     db.commit()
     return True
 
+def create_vr_contact(db: Session, payload: VRContactCreate):
+    record = VehicleRegistrationContact(
+        master_record_id=payload.master_record_id,
+        contact_name=payload.contact_name,
+        department=payload.department,
+        email=payload.email,
+        phone_number=payload.phone_number,
+        address=payload.address,
+        alt_contact_1=payload.alt_contact_1,
+        alt_contact_2=payload.alt_contact_2,
+        alt_contact_3=payload.alt_contact_3,
+        alt_contact_4=payload.alt_contact_4,
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+def get_all_contacts(db: Session):
+    return db.query(VehicleRegistrationContact).all()
+
+def get_contacts_by_master(db: Session, master_record_id: int):
+    return (
+        db.query(VehicleRegistrationContact)
+        .filter(VehicleRegistrationContact.master_record_id == master_record_id)
+        .all()
+    )
+
+def update_contact(db: Session, contact_id: int, data: VRContactUpdate):
+    contact = db.query(VehicleRegistrationContact).filter_by(id=contact_id).first()
+
+    if not contact:
+        return None
+
+    # Apply changes
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(contact, key, value)
+
+    db.commit()
+    db.refresh(contact)
+    return contact
