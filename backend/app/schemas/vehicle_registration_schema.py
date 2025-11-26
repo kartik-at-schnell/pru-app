@@ -1,7 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime, date
 from typing import Optional, List
-from pydantic import Field, field_validator
 
 class Config:
     from_attributes = True #tells orm can access attributes
@@ -17,12 +16,27 @@ class VehicleRegistrationContact(BaseModel):
     class Config:
         from_attributes = True
 
-class VehicleRegistrationReciprocalIssued(BaseModel):
+# --- UPDATED RECIPROCAL READ SCHEMA (Used in Details View) ---
+class  VehicleRegistrationReciprocalIssuedRead(BaseModel):
     id: int
-    description: Optional[str] = None
-    license_number: Optional[str] = None
-    states: Optional[str] = None
+    master_record_id: Optional[int] = None
+    description: str
+    license_plate: str          # Renamed from license_number
+    state: str                  # Renamed from states
+    year_of_renewal: int
+    cancellation_date: Optional[date] = None
+    sticker_number: Optional[str] = None
     
+    # # New Fields
+    # issuing_authority: str
+    # issuing_state: str
+    # recipent_state: str
+    
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    created_by: Optional[str] = None
+    updated_by: Optional[str] = None
+
     class Config:
         from_attributes = True
 
@@ -79,29 +93,6 @@ class VehicleRegistrationFictitious(BaseModel):
 
 # schemas for our main Master table
 class VehicleRegistrationMasterBase(BaseModel):
-
-    id: int = Field(alias="id")
-    title: Optional[str] = None
-    parent: str = Field(default="Vehicle Registration")
-    list: str = Field(default="Master Record")
-    key: str = Field(alias="vehicle_id_number")
-    owner: str = Field(alias="registered_owner")
-    submitted: datetime = Field(alias="created_at")
-    status: str = Field(alias="approval_status")
-    canApprove: bool = Field(default=True)
-    
-    class Config:
-        from_attributes = True
-        populate_by_name = True
-    
-    @field_validator('title', mode='before')
-    @classmethod
-    def compute_title(cls, v, info):
-        vin = str(info.data.get('id', 'N/A')).zfill(4) if info.data.get('id') else 'N/A'
-        status = info.data.get('approval_status', 'Pending').capitalize()
-        return f"{vin} • {status}"
-
-
     id: int = Field(alias="id")
     title: Optional[str] = None
     parent: str = Field(default="Vehicle Registration")
@@ -157,10 +148,9 @@ class VehicleRegistrationMaster(VehicleRegistrationMasterBase):
 
 # DETAILS schema -it inherits everything from VehicleRegistrationMaster and then adds all the nested lists
 class VehicleRegistrationMasterDetails(VehicleRegistrationMaster):
-    # These will be lists of the schemas we defined at the top
     contacts: List[VehicleRegistrationContact] = []
-    reciprocal_issued: List[VehicleRegistrationReciprocalIssued] = []
     reciprocal_received: List[VehicleRegistrationReciprocalReceived] = []
+    reciprocal_issued: List["VehicleRegistrationReciprocalIssuedResponse"] = Field(default_factory=list)
     undercover_records: List[VehicleRegistrationUnderCover] = []
     fictitious_records: List[VehicleRegistrationFictitious] = []
     
@@ -168,11 +158,8 @@ class VehicleRegistrationMasterDetails(VehicleRegistrationMaster):
         from_attributes = True
 
 
-
-
 #Create/Update schemas for all those other tables
 
-# main vehicle_registration_routes.py file needs these, so its POST/PUT routes kee working.
 class VehicleRegistrationUnderCoverCreateBody(BaseModel):
     license_number: Optional[str]
     vehicle_id_number: Optional[str]
@@ -192,9 +179,58 @@ class VehicleRegistrationContactCreateBody(BaseModel):
     phone_number: Optional[str] = None
 
 class VehicleRegistrationReciprocalIssuedCreateBody(BaseModel):
+    master_record_id: Optional[int] = None
+    description: str
+    license_plate: str
+    state: str
+    year_of_renewal: int
+    cancellation_date: Optional[date] = None
+    sticker_number: Optional[str] = None
+    created_by: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+# --- UPDATED RECIPROCAL RESPONSE ---
+class VehicleRegistrationReciprocalIssuedResponse(VehicleRegistrationReciprocalIssuedCreateBody):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    updated_by: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+# --- UPDATED RECIPROCAL UPDATE BODY ---
+class VehicleRegistrationReciprocalIssuedUpdate(BaseModel):
     description: Optional[str] = None
-    license_number: Optional[str] = None
-    states: Optional[str] = None
+    license_plate: Optional[str] = None
+    state: Optional[str] = None
+    year_of_renewal: Optional[int] = None
+    cancellation_date: Optional[date] = None
+    sticker_number: Optional[str] = None
+    # issuing_authority: Optional[str] = None
+    # issuing_state: Optional[str] = None
+    # recipent_state: Optional[str] = None
+    updated_by: Optional[str] = None
+    
+    # Apply validators to update model as well
+    @field_validator('year_of_renewal')
+    def validate_year(cls, v):
+        if v is None: return v
+        current_year = datetime.now().year
+        if v < current_year:
+            raise ValueError(f"Year of renewal ({v}) must be current or future year")
+        return v
+
+    # @field_validator('issuing_state', 'recipent_state')
+    # def validate_state_code(cls, v):
+    #     if v is None: return v
+    #     if len(v) != 2 or not v.isalpha():
+    #         raise ValueError(f"State code ({v}) must be exactly 2 letters")
+    #     return v.upper() 
+
 
 class VehicleRegistrationReciprocalReceivedCreateBody(BaseModel):
     description: Optional[str] = None
@@ -210,8 +246,6 @@ class VehicleRegistrationFictitiousTrapInfoCreateBody(BaseModel):
     number: Optional[str] = None
 
 # new schemas
-
-#schemas for creating new records
 class BaseVehicleRegistrationCreate(BaseModel):
     license_number: str
     registered_owner: str
@@ -358,3 +392,5 @@ class VehicleRegistrationFictitiousResponse(VehicleRegistrationResponse):
     class Config:
         from_attributes = True
 
+VehicleRegistrationMasterDetails.model_rebuild()
+VehicleRegistrationReciprocalIssuedResponse.model_rebuild()       

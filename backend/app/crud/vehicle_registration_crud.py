@@ -1,3 +1,8 @@
+from app.models import VehicleRegistrationReciprocalIssued, VehicleRegistrationMaster
+from app.schemas.vehicle_registration_schema import (
+    VehicleRegistrationReciprocalIssuedCreateBody,
+    VehicleRegistrationReciprocalIssuedUpdate 
+)
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
@@ -229,6 +234,92 @@ def get_vehicle_master_details(db: Session, master_id: str):
     )
     return query.first()
 
+# ================================
+# RECIPROCAL ISSUED CRUD (UPDATED)
+# ================================
+
+def create_reciprocal_issued_record(
+    db: Session, 
+    payload: VehicleRegistrationReciprocalIssuedCreateBody
+):
+    record = VehicleRegistrationReciprocalIssued(
+        master_record_id = payload.master_record_id,
+        description = payload.description,
+        license_plate = payload.license_plate,
+        state = payload.state,
+        year_of_renewal = payload.year_of_renewal,
+        cancellation_date = payload.cancellation_date,
+        sticker_number = payload.sticker_number,
+        created_by = payload.created_by
+    )
+
+    try:
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Insert failed: {str(e)}")
+
+    return record
+
+
+def get_reciprocal_record_by_id(db: Session, record_id: int):
+    record = db.query(VehicleRegistrationReciprocalIssued).filter_by(id=record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return record
+
+
+def get_all_reciprocal_records(db: Session, skip: int = 0, limit: int = 100):
+    return (
+        db.query(VehicleRegistrationReciprocalIssued)
+        .order_by(VehicleRegistrationReciprocalIssued.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+
+def update_reciprocal_record(
+    db: Session, 
+    record_id: int, 
+    payload: VehicleRegistrationReciprocalIssuedUpdate
+):
+    record = db.query(VehicleRegistrationReciprocalIssued).filter_by(id=record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
+        if hasattr(record, key):
+            setattr(record, key, value)
+
+    try:
+        db.commit()
+        db.refresh(record)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Update failed: {str(e)}")
+
+    return record
+
+
+def delete_reciprocal_record(db: Session, record_id: int):
+    record = db.query(VehicleRegistrationReciprocalIssued).filter_by(id=record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    
+    try:
+        db.delete(record)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
+
+    return {"message": "Deleted successfully"}
+
 #helper function to validate master exists and return it
 def get_master_by_id(db: Session, master_id: str):
     master = db.query(VehicleRegistrationMaster).filter(
@@ -391,4 +482,3 @@ def bulk_delete(db: Session, record_ids: List[int]):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Bulk delete failed: {str(e)}")
-

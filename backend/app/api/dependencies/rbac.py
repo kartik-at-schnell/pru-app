@@ -20,11 +20,11 @@ def require_role(*roles):
     def checker(user = Depends(get_current_user)):
         user_roles = {r.name.lower() for r in user.roles}
 
-        print("=== RBAC DEBUG ===")
-        print("User:", user.email)
-        print("User Roles:", user_roles)
-        print("Allowed Roles:", roles)
-        print("==================")
+        # print("=== RBAC DEBUG ===")
+        # print("User:", user.email)
+        # print("User Roles:", user_roles)
+        # print("Allowed Roles:", roles)
+        # print("==================")
 
         if not user_roles.intersection(roles):
             raise HTTPException(status_code=403, detail="Not enough permissions")

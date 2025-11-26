@@ -1,6 +1,8 @@
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey, Numeric, Date
 from sqlalchemy.orm import relationship
-from .base import BaseModel
+from sqlalchemy.sql import func
+from .base import Base, BaseModel
 
 class VehicleRegistrationMaster(BaseModel):
     __tablename__ = "vehicle_registration_master"
@@ -17,9 +19,7 @@ class VehicleRegistrationMaster(BaseModel):
 
     cls = Column(String(50))
     unladen_wt = Column(String(50))
-    # related_undercover
-    # related_fictitious
-
+    
     make = Column(String(50))
     model = Column(String(100))
     year_model = Column(Integer)
@@ -27,7 +27,6 @@ class VehicleRegistrationMaster(BaseModel):
     body_type = Column(String(50))
     type_license = Column(String(50))
     type_vehicle = Column(String(50))
-    # vlp_class = Column(String(50))
     category = Column(String(50))
 
     expiration_date = Column(Date)
@@ -46,20 +45,20 @@ class VehicleRegistrationMaster(BaseModel):
     record_type = Column(String(20), default="master", nullable=True)
     description = Column(Text)
     error_text = Column(Text)
-    link_to_folder = Column(String(500))    #s3 URI to pdf, i assume
-    document_id = Column(Integer)   #document id on s3                      
+    link_to_folder = Column(String(500))
+    document_id = Column(Integer)
 
-    #advance vehicle specs
-    cert_type = Column(String(50))                     #certificate type (CERTSTYPED)
-    mp = Column(String(50))                            #hp/mp
-    mo = Column(String(50))                            #Model code/MO
-    axl = Column(String(50))                           #axles
-    wc = Column(String(50))                            #weight class
-    cc_alco = Column(String(50))                       #CC/ALCO info
+    # Advance vehicle specs
+    cert_type = Column(String(50))
+    mp = Column(String(50))
+    mo = Column(String(50))
+    axl = Column(String(50))
+    wc = Column(String(50))
+    cc_alco = Column(String(50))
     type_vehicle_use = Column(String(50)) 
 
     contacts = relationship("VehicleRegistrationContact", back_populates="master_record")
-    reciprocal_issued = relationship("VehicleRegistrationReciprocalIssued", back_populates="master_record")
+    # reciprocal_issued = relationship("VehicleRegistrationReciprocalIssued", back_populates="master_record")
     reciprocal_received = relationship("VehicleRegistrationReciprocalReceived", back_populates="master_record")
     undercover_records = relationship("VehicleRegistrationUnderCover", back_populates="master_record", cascade="all, delete-orphan")
     fictitious_records = relationship("VehicleRegistrationFictitious", back_populates="master_record", cascade="all, delete-orphan")
@@ -84,7 +83,6 @@ class VehicleRegistrationUnderCover(BaseModel):
     model = Column(String(100))
     year_model = Column(Integer)
     year_sold = Column(Integer)
-    # vlp_class = Column(String(50))
     class_type = Column(String(50))
     type_license = Column(String(50))
     body_type = Column(String(50))
@@ -232,17 +230,25 @@ class VehicleRegistrationFictitiousTrapInfo(BaseModel):
     fictitious_record = relationship("VehicleRegistrationFictitious", back_populates="trap_info")
 
 
-class VehicleRegistrationReciprocalIssued(BaseModel):
+# --- UPDATED RECIPROCAL ISSUED TABLE ---
+class VehicleRegistrationReciprocalIssued( BaseModel):
     __tablename__ = "vehicle_registration_reciprocal_issued"
 
     id = Column(Integer, primary_key=True, index=True)
-    master_record_id = Column(Integer, ForeignKey("vehicle_registration_master.id"))
+    master_record_id = Column(Integer, nullable=True)
 
-    description = Column(Text)
-    license_plate = Column(String(20))
-    state = Column(String(50))
-    year_of_renewal = Column(Integer)
-    cancellation_date = Column(Date)
-    sticker_number = Column(String(50))
+    description = Column(String, nullable=False)
+    license_plate = Column(String, nullable=False)
+    state = Column(String, nullable=False)
+    year_of_renewal = Column(Integer, nullable=False)
 
-    master_record = relationship("VehicleRegistrationMaster", back_populates="reciprocal_issued")
+    cancellation_date = Column(Date, nullable=True)
+    sticker_number = Column(String, nullable=True)
+
+    created_by = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    updated_by = Column(String, nullable=True)
+    updated_at = Column(DateTime, onupdate=datetime.utcnow)
+
+    #master_record = relationship("VehicleRegistrationMaster", back_populates="reciprocal_issued")
