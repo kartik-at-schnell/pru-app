@@ -119,7 +119,7 @@ class VehicleRegistrationUnderCover(BaseModel):
     description = Column(Text)
  
     # master_record = relationship("VehicleRegistrationMaster", back_populates="undercover_records")
-    trap_info = relationship("VehicleRegistrationUnderCoverTrapInfo", back_populates="undercover_record")
+    trap_info = relationship("VehicleRegistrationUnderCoverTrapInfo", back_populates="undercover_record", cascade="all, delete-orphan")
  
  
 class VehicleRegistrationFictitious(BaseModel):
@@ -240,7 +240,7 @@ class VehicleRegistrationFictitiousTrapInfo(BaseModel):
  
     id = Column(Integer, primary_key=True, index=True)
     fictitious_id = Column(Integer, ForeignKey("vehicle_registration_fictitious.id"))
- 
+    # fictitious_id =Column(Integer, nullable=False)
     date = Column(Date)
     number = Column(String(100))
     officer = Column(String(100))
@@ -254,7 +254,8 @@ class VehicleRegistrationUnderCoverTrapInfo(BaseModel):
  
     id = Column(Integer, primary_key=True, index=True)
     undercover_id = Column(Integer, ForeignKey("vehicle_registration_undercover.id"))
- 
+
+    # undercover_id =Column(Integer, nullable=False)
     date = Column(Date)
     number = Column(String(100))
     officer = Column(String(100))

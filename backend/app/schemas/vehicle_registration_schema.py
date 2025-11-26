@@ -530,6 +530,76 @@ class VRContactResponse(BaseModel):
         from_attributes = True
 
 
+class UCTrapInfoCreate(BaseModel):
+    undercover_id: int
+    date: date
+    number: Optional[str] = None
+    officer_name: Optional[str] = None
+    location: Optional[str] = None
+    details: Optional[str] = None
+    verified_by: Optional[str] = None
+    verification_date: Optional[date] = None
+
+class UCTrapInfoUpdate(BaseModel):
+    date: Optional[date] = None
+    number: Optional[str] = None
+    officer_name: Optional[str] = None
+    location: Optional[str] = None
+    details: Optional[str] = None
+    verified_by: Optional[str] = None
+    verification_date: Optional[date] = None  
+
+class UCTrapInfoResponse(BaseModel):
+    id: int
+    undercover_id: int
+    date: date
+    number: Optional[str]
+    officer_name: Optional[str]
+    location: Optional[str]
+    details: Optional[str]
+    verified_by: Optional[str]
+    verification_date: Optional[date] = None
+
+    class Config:
+        from_attributes = True
+
+class FictitiousTrapInfoCreate(BaseModel):
+    fictitious_id: int
+    date: Optional[date] = None
+    number: Optional[str] = None
+    location: Optional[str] = None
+    officer: Optional[str] = None
+    reason: Optional[str] = None
+    verified_by: Optional[str] = None
+    verification_date: Optional[date] = None
+  
+
+
+class FictitiousTrapInfoUpdate(BaseModel):
+    date: Optional[date] = None
+    number: Optional[str] = None
+    location: Optional[str] = None
+    officer: Optional[str] = None
+    reason: Optional[str] = None
+    verified_by: Optional[str] = None
+    verification_date: Optional[date] = None
+ 
+
+
+class FictitiousTrapInfoResponse(BaseModel):
+    id: int
+    fictitious_id: int
+    date: Optional[date]
+    number: Optional[str]
+    location: Optional[str]
+    officer: Optional[str]
+    reason: Optional[str]
+    verified_by: Optional[str]
+    verification_date: Optional[date]
+
+
+    class Config:
+        from_attributes = True
 
 
         

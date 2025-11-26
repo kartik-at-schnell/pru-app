@@ -2,12 +2,12 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional, Union
 from app import crud
-from app.crud.vehicle_registration_crud import get_all_contacts, get_contacts_by_master
+from app.crud.vehicle_registration_crud import create_fictitious_trap_info, create_uc_trap_info, delete_fictitious_trap_info, delete_uc_trap_info, get_all_contacts, get_contacts_by_master, get_fictitious_trap_info, get_uc_trap_info, list_fictitious_trap_info, list_uc_trap_info, update_fictitious_trap_info, update_uc_trap_info
 from app.crud.vehicle_registration_crud import  create_vr_contact, delete_vr_reciprocal_received, get_all_reciprocal_records, get_all_vr_reciprocal_received, update_vr_reciprocal_received
 from app.crud.vehicle_registration_crud import get_reciprocal_record_by_id
 from app.crud.vehicle_registration_crud import update_reciprocal_record 
 from app.crud.vehicle_registration_crud import delete_reciprocal_record
-from app.schemas.vehicle_registration_schema import VRContactUpdate, VehicleRegistrationReciprocalIssuedUpdate
+from app.schemas.vehicle_registration_schema import FictitiousTrapInfoCreate, FictitiousTrapInfoResponse, FictitiousTrapInfoUpdate, UCTrapInfoCreate, UCTrapInfoResponse, UCTrapInfoUpdate, VRContactUpdate, VehicleRegistrationReciprocalIssuedUpdate
 from app.schemas.vehicle_registration_schema import (
     VRReciprocalReceivedCreate,
     VRReciprocalReceivedResponse,
@@ -379,3 +379,125 @@ def update_contact_route(
 
     return VRContactResponse.model_validate(updated)
 
+@router.post(
+    "/undercover/trap-info",
+    response_model=UCTrapInfoResponse
+)
+def create_uc_trap(
+    payload: UCTrapInfoCreate,
+    db: Session = Depends(get_db)
+):
+    result = create_uc_trap_info(db, payload)
+    return UCTrapInfoResponse.model_validate(result)
+
+
+@router.get(
+    "/undercover/{undercover_id}/trap-info",
+    response_model=List[UCTrapInfoResponse]
+)
+def list_uc_trap(
+    undercover_id: int,
+    db: Session = Depends(get_db)
+):
+    return [
+        UCTrapInfoResponse.model_validate(r)
+        for r in list_uc_trap_info(db, undercover_id)
+    ]
+
+
+@router.get(
+    "/undercover/trap-info/{record_id}",
+    response_model=UCTrapInfoResponse
+)
+def get_uc_trap(
+    record_id: int,
+    db: Session = Depends(get_db)
+):
+    record = get_uc_trap_info(db, record_id)
+    return UCTrapInfoResponse.model_validate(record)
+
+
+@router.put(
+    "/undercover/trap-info/{record_id}",
+    response_model=UCTrapInfoResponse
+)
+def update_uc_trap(
+    record_id: int,
+    payload: UCTrapInfoUpdate,
+    db: Session = Depends(get_db)
+):
+    updated = update_uc_trap_info(db, record_id, payload)
+    return UCTrapInfoResponse.model_validate(updated)
+
+
+@router.delete(
+    "/undercover/trap-info/{record_id}",
+    status_code=204
+)
+def delete_uc_trap(
+    record_id: int,
+    db: Session = Depends(get_db)
+):
+    delete_uc_trap_info(db, record_id)
+    return
+
+
+@router.post(
+    "/fictitious/trap-info",
+    response_model=FictitiousTrapInfoResponse
+)
+def create_fc_trap_info(
+    payload: FictitiousTrapInfoCreate,
+    db: Session = Depends(get_db)
+):
+    record = create_fictitious_trap_info(db, payload)
+    return FictitiousTrapInfoResponse.model_validate(record)
+
+
+@router.get(
+    "/fictitious/{fictitious_id}/trap-info",
+    response_model=List[FictitiousTrapInfoResponse]
+)
+def list_fc_trap_info(
+    fictitious_id: int,
+    db: Session = Depends(get_db)
+):
+    records = list_fictitious_trap_info(db, fictitious_id)
+    return [FictitiousTrapInfoResponse.model_validate(r) for r in records]
+
+
+@router.get(
+    "/fictitious/trap-info/{record_id}",
+    response_model=FictitiousTrapInfoResponse
+)
+def get_fc_trap_info(
+    record_id: int,
+    db: Session = Depends(get_db)
+):
+    record = get_fictitious_trap_info(db, record_id)
+    return FictitiousTrapInfoResponse.model_validate(record)
+
+
+@router.put(
+    "/fictitious/trap-info/{record_id}",
+    response_model=FictitiousTrapInfoResponse
+)
+def update_fc_trap_info(
+    record_id: int,
+    payload: FictitiousTrapInfoUpdate,
+    db: Session = Depends(get_db)
+):
+    updated = update_fictitious_trap_info(db, record_id, payload)
+    return FictitiousTrapInfoResponse.model_validate(updated)
+
+
+@router.delete(
+    "/fictitious/trap-info/{record_id}",
+    status_code=204
+)
+def delete_fc_trap_info(
+    record_id: int,
+    db: Session = Depends(get_db)
+):
+    delete_fictitious_trap_info(db, record_id)
+    return

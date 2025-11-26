@@ -1,5 +1,9 @@
 from app.models import VehicleRegistrationReciprocalIssued, VehicleRegistrationMaster
 from app.schemas.vehicle_registration_schema import (
+    FictitiousTrapInfoCreate,
+    FictitiousTrapInfoUpdate,
+    UCTrapInfoCreate,
+    UCTrapInfoUpdate,
     VRContactCreate,
     VRContactUpdate,
     VRReciprocalReceivedCreate,
@@ -588,3 +592,102 @@ def update_contact(db: Session, contact_id: int, data: VRContactUpdate):
     db.commit()
     db.refresh(contact)
     return contact
+
+def create_uc_trap_info(db: Session, payload: UCTrapInfoCreate):
+    record = VehicleRegistrationUnderCoverTrapInfo(
+        undercover_id = payload.undercover_id,
+        date = payload.date,
+        number = payload.number,
+        officer = payload.officer_name,
+        location = payload.location,
+        details = payload.details,
+        verified_by = payload.verified_by,
+        verification_date = payload.verification_date
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+def get_uc_trap_info(db: Session, record_id: int):
+    record = db.query(VehicleRegistrationUnderCoverTrapInfo).filter_by(id=record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Trap info not found")
+    return record
+
+
+def list_uc_trap_info(db: Session, undercover_id: int):
+    return db.query(VehicleRegistrationUnderCoverTrapInfo).filter(
+        VehicleRegistrationUnderCoverTrapInfo.undercover_id == undercover_id
+    ).all()
+
+
+def update_uc_trap_info(db: Session, record_id: int, payload: UCTrapInfoUpdate):
+    record = get_uc_trap_info(db, record_id)
+    update_data = payload.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
+        if hasattr(record, key):
+            setattr(record, key, value)
+
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+def delete_uc_trap_info(db: Session, record_id: int):
+    record = get_uc_trap_info(db, record_id)
+    db.delete(record)
+    db.commit()
+    return True
+
+def create_fictitious_trap_info(db: Session, payload: FictitiousTrapInfoCreate):
+    record = VehicleRegistrationFictitiousTrapInfo(
+        fictitious_id = payload.fictitious_id,
+        date = payload.date,
+        number = payload.number,
+        location = payload.location,
+        officer_name = payload.officer_name,
+        reason = payload.reason,
+        verified_by = payload.verified_by,
+        verification_date = payload.verification_date,
+        created_by = payload.created_by
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+def get_fictitious_trap_info(db: Session, record_id: int):
+    record = db.query(VehicleRegistrationFictitiousTrapInfo).filter_by(id=record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Trap info not found")
+    return record
+
+
+def list_fictitious_trap_info(db: Session, fictitious_id: int):
+    return db.query(VehicleRegistrationFictitiousTrapInfo).filter(
+        VehicleRegistrationFictitiousTrapInfo.fictitious_id == fictitious_id
+    ).all()
+
+
+def update_fictitious_trap_info(db: Session, record_id: int, payload: FictitiousTrapInfoUpdate):
+    record = get_fictitious_trap_info(db, record_id)
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(record, key, value)
+
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+def delete_fictitious_trap_info(db: Session, record_id: int):
+    record = get_fictitious_trap_info(db, record_id)
+    db.delete(record)
+    db.commit()
+    return True
+
