@@ -5,6 +5,8 @@ from typing import Optional, List
 from pydantic import Field, field_validator
 from sqlalchemy import func
 
+from app.models.vehicle_registration import VehicleRegistrationReciprocalReceived
+
 class Config:
     from_attributes = True #tells orm can access attributes
 
@@ -43,7 +45,7 @@ class  VehicleRegistrationReciprocalIssuedRead(BaseModel):
     class Config:
         from_attributes = True
 
-class VehicleRegistrationReciprocalReceived(BaseModel):
+class VehicleRegistrationReciprocalReceivedResponse(BaseModel):
     id: int
     description: Optional[str] = None
     license_number: Optional[str] = None
@@ -153,7 +155,7 @@ class VehicleRegistrationMaster(VehicleRegistrationMasterBase):
 class VehicleRegistrationMasterDetails(VehicleRegistrationMaster):
     contacts: List[VehicleRegistrationContact] = []
     reciprocal_received: List[VehicleRegistrationReciprocalReceived] = []
-    reciprocal_issued: List["VehicleRegistrationReciprocalIssuedResponse"] = Field(default_factory=list)
+    reciprocal_received: List[VehicleRegistrationReciprocalReceivedResponse] = Field(default_factory=list)
     undercover_records: List[VehicleRegistrationUnderCover] = []
     fictitious_records: List[VehicleRegistrationFictitious] = []
     
@@ -394,6 +396,119 @@ class VehicleRegistrationFictitiousResponse(VehicleRegistrationResponse):
     
     class Config:
         from_attributes = True
+        
+class VRReciprocalReceivedCreate(BaseModel):
+    registered_owner: str
+    owner_address: str
+    description: str
+    license_plate: str
+    sticker_number: Optional[str] = None
 
-VehicleRegistrationMasterDetails.model_rebuild()
-VehicleRegistrationReciprocalIssuedResponse.model_rebuild()       
+    year_of_renewal: int
+    cancellation_date: Optional[date] = None
+    recieved_date: date   # use EXACT spelling from model
+    expiry_date: date
+
+    issuing_authority: str
+    issuing_state: str
+    recipent_state: str   # EXACT model field spelling
+
+    created_by: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+        
+class VRReciprocalReceivedResponse(BaseModel):
+    id: int
+    registered_owner: Optional[str] = None
+    owner_address: Optional[str] = None
+    description: Optional[str] = None
+    license_plate: Optional[str] = None
+    sticker_number: Optional[str] = None
+
+    year_of_renewal: Optional[int] = None
+    cancellation_date: Optional[date] = None
+    recieved_date: Optional[date] = None
+    expiry_date: Optional[date] = None
+
+    issuing_authority: Optional[str] = None
+    issuing_state: Optional[str] = None
+    recipent_state: Optional[str] = None
+
+    created_by: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_by: Optional[str] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+# class VehicleRegistrationReciprocalReceivedCreateBody(BaseModel):
+#     master_record_id: int
+#     description: str
+#     license_plate: str
+#     issuing_state: str
+#     recipient_state: str
+#     year_of_renewal: int
+
+#     received_date: date
+#     expiry_date: date
+
+#     cancellation_date: Optional[date] = None
+#     sticker_number: Optional[str] = None
+
+#     registered_owner: Optional[str] = None
+#     owner_address: Optional[str] = None
+
+#     created_by: str
+
+#     class Config:
+#         from_attributes = True
+
+
+class VRReciprocalReceivedUpdate(BaseModel):
+    registered_owner: Optional[str] = None
+    owner_address: Optional[str] = None
+    description: Optional[str] = None
+    license_plate: Optional[str] = None
+    sticker_number: Optional[str] = None
+
+    year_of_renewal: Optional[int] = None
+    cancellation_date: Optional[date] = None
+    recieved_date: Optional[date] = None       # MISSING
+    expiry_date: Optional[date] = None
+
+    issuing_authority: Optional[str] = None    # MISSING
+    issuing_state: Optional[str] = None
+    recipent_state: Optional[str] = None       # MISSING
+
+    class Config:
+        from_attributes = True
+
+
+# class VehicleRegistrationReciprocalReceivedResponse(BaseModel):
+#     id: int
+#     master_record_id: int
+#     description: str
+#     license_plate: str
+#     issuing_state: str
+#     recipient_state: str
+#     year_of_renewal: int
+#     received_date: date
+#     expiry_date: date
+
+#     cancellation_date: Optional[date]
+#     sticker_number: Optional[str]
+#     registered_owner: Optional[str]
+#     owner_address: Optional[str]
+
+#     created_by: str
+#     created_at: datetime
+#     updated_by: Optional[str]
+#     updated_at: Optional[datetime]
+
+#     class Config:
+#         from_attributes = True
+
+# VehicleRegistrationMasterDetails.model_rebuild()
+# VehicleRegistrationReciprocalIssuedResponse.model_rebuild()       

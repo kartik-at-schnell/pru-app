@@ -1,7 +1,10 @@
 from app.models import VehicleRegistrationReciprocalIssued, VehicleRegistrationMaster
 from app.schemas.vehicle_registration_schema import (
+    VRReciprocalReceivedCreate,
+    VRReciprocalReceivedUpdate,
     VehicleRegistrationReciprocalIssuedCreateBody,
-    VehicleRegistrationReciprocalIssuedUpdate 
+    VehicleRegistrationReciprocalIssuedUpdate,
+    VehicleRegistrationReciprocalReceivedCreateBody 
 )
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
@@ -482,3 +485,58 @@ def bulk_delete(db: Session, record_ids: List[int]):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Bulk delete failed: {str(e)}")
+
+def create_vr_reciprocal_received(db: Session, payload: VRReciprocalReceivedCreate):
+    record = VehicleRegistrationReciprocalReceived(
+        registered_owner = payload.registered_owner,
+        owner_address = payload.owner_address,
+        description = payload.description,
+        license_plate = payload.license_plate,
+        sticker_number = payload.sticker_number,
+        year_of_renewal = payload.year_of_renewal,
+        cancellation_date = payload.cancellation_date,
+        recieved_date = payload.recieved_date,
+        expiry_date = payload.expiry_date,
+        issuing_authority = payload.issuing_authority,
+        issuing_state = payload.issuing_state,
+        recipent_state = payload.recipent_state,
+        created_by = payload.created_by
+    )
+
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+def get_all_vr_reciprocal_received(db: Session):
+    return db.query(VehicleRegistrationReciprocalReceived).all()
+
+def update_vr_reciprocal_received(db: Session, record_id: int, payload: VRReciprocalReceivedUpdate):
+    record = db.query(VehicleRegistrationReciprocalReceived).filter_by(id=record_id).first()
+
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+
+    payload_dict = payload.model_dump(exclude_unset=True)
+
+    for field, value in payload_dict.items():
+        setattr(record, field, value)
+
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+def delete_vr_reciprocal_received(db: Session, record_id: int):
+    record = db.query(VehicleRegistrationReciprocalReceived).filter(
+        VehicleRegistrationReciprocalReceived.id == record_id
+    ).first()
+
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+
+    db.delete(record)
+    db.commit()
+    return True
+

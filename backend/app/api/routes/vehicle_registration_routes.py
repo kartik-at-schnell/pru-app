@@ -1,11 +1,18 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional, Union
-from app.crud.vehicle_registration_crud import get_all_reciprocal_records
+from app.crud.vehicle_registration_crud import  delete_vr_reciprocal_received, get_all_reciprocal_records, get_all_vr_reciprocal_received, update_vr_reciprocal_received
 from app.crud.vehicle_registration_crud import get_reciprocal_record_by_id
 from app.crud.vehicle_registration_crud import update_reciprocal_record 
 from app.crud.vehicle_registration_crud import delete_reciprocal_record
-from app.schemas.vehicle_registration_schema import VehicleRegistrationReciprocalIssuedUpdate 
+from app.schemas.vehicle_registration_schema import VehicleRegistrationReciprocalIssuedUpdate, VehicleRegistrationReciprocalReceivedCreateBody, VehicleRegistrationReciprocalReceivedResponse 
+from app.schemas.vehicle_registration_schema import (
+    VRReciprocalReceivedCreate,
+    VRReciprocalReceivedResponse,
+    VRReciprocalReceivedUpdate
+)
+from app.crud.vehicle_registration_crud import create_vr_reciprocal_received
+
 from app.database import get_db
 from app.api.dependencies.rbac import require_role
 
@@ -284,3 +291,46 @@ def get_masters_dropdown(
 ):
     masters = get_all_masters_for_dropdown(db)
     return [{"id": m[0], "vin": m[1], "owner": m[2]} for m in masters]
+
+
+@router.post(
+    "/reciprocal-received",
+    response_model=VRReciprocalReceivedResponse
+)
+def create_reciprocal_received(
+    payload: VRReciprocalReceivedCreate,
+    db: Session = Depends(get_db)
+):
+    record = create_vr_reciprocal_received(db, payload)
+    return VRReciprocalReceivedResponse.model_validate(record)
+
+@router.get(
+    "/reciprocal-received",
+    response_model=List[VRReciprocalReceivedResponse]
+)
+def list_reciprocal_received(db: Session = Depends(get_db)):
+    records = get_all_vr_reciprocal_received(db)
+    return [VRReciprocalReceivedResponse.model_validate(r) for r in records]
+
+@router.put(
+    "/reciprocal-received/{record_id}",
+    response_model=VRReciprocalReceivedResponse
+)
+def update_reciprocal_received(
+    record_id: int,
+    payload: VRReciprocalReceivedUpdate,
+    db: Session = Depends(get_db)
+):
+    record = update_vr_reciprocal_received(db, record_id, payload)
+    return VRReciprocalReceivedResponse.model_validate(record)
+
+@router.delete(
+    "/reciprocal-received/{record_id}",
+    status_code=204
+)
+def delete_reciprocal_received(
+    record_id: int,
+    db: Session = Depends(get_db)
+):
+    delete_vr_reciprocal_received(db, record_id)
+    return
