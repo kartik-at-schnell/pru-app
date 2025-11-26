@@ -39,7 +39,7 @@ def perform_action(
             record_id=action_data.record_id,
             new_status=result["new_status"],
             action_logged=True,
-            time_stamp=result["log_entry"].created_at
+            time_stamp=result["log_entry"].timestamp
         )
     except ValueError as e:
         # handle business logic errors (invalid action, record not found, etc.)
@@ -58,12 +58,12 @@ def get_action_history(record_id: str,
         return [
             ActionLogOut(
                 id=log.id,
-                record_table=log.record_table,
+                record_table=log.record_type,
                 record_id=log.record_id,
                 action_type_name=log.action_type.name, # Join with ActionType
                 user_id=log.user_id,
                 notes=log.notes,
-                created_at=log.created_at,
+                created_at=log.timestamp,
                 ip_address=log.ip_address
             )
             for log in history
@@ -166,7 +166,7 @@ def approve_dl_record(
                 "record_id": record_id,
                 "old_status": result["old_status"],
                 "new_status": result["new_status"],
-                "timestamp": result["log_entry"].created_at
+                "timestamp": result["log_entry"].timestamp
             }
         )
     except ValueError as e:
@@ -200,7 +200,7 @@ def reject_dl_record(
                 "record_id": record_id,
                 "old_status": result["old_status"],
                 "new_status": result["new_status"],
-                "timestamp": result["log_entry"].created_at
+                "timestamp": result["log_entry"].timestamp
             }
         )
     except ValueError as e:
@@ -234,7 +234,7 @@ def hold_dl_record(
                 "record_id": record_id,
                 "old_status": result["old_status"],
                 "new_status": result["new_status"],
-                "timestamp": result["log_entry"].created_at
+                "timestamp": result["log_entry"].timestamp
             }
         )
     except ValueError as e:
@@ -254,12 +254,12 @@ def get_dl_action_history(
         return [
             ActionLogOut(
                 id=log.id,
-                record_table=log.record_table,
+                record_table=log.record_type,
                 record_id=log.record_id,
                 action_type_name=log.action_type.name,
                 user_id=log.user_id,
                 notes=log.notes,
-                created_at=log.created_at,
+                created_at=log.timestamp,
                 ip_address=log.ip_address
             )
             for log in history

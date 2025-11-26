@@ -128,14 +128,15 @@ def perform_dl_record_action(
 
     # log entry
     log_entry = RecordActionLog(
-        record_table="driver_license_original",
-        record_id=str(record_id),
-        action_type_id=action_type.id,
-        user_id=current_user.id,
-        notes=notes,
-        created_at=datetime.now(timezone.utc),
-        ip_address=ip_address or "unknown"
-    )
+    record_type="driver_license_original",
+    record_id=record_id,
+    action_type_id=action_type.id,
+    user_id=str(current_user.id),
+    notes=notes,
+    timestamp=datetime.now(timezone.utc),
+    ip_address=ip_address or "unknown"
+)
+
 
     db.add(log_entry)
     db.add(record)
@@ -153,6 +154,6 @@ def perform_dl_record_action(
 #action history for dl
 def get_dl_record_action_history(db: Session, record_id: int):
     return db.query(RecordActionLog).join(ActionType).filter(
-        RecordActionLog.record_id == str(record_id),
-        RecordActionLog.record_table == "driver_license_original"
-    ).order_by(RecordActionLog.created_at.desc()).all()
+        RecordActionLog.record_id == record_id,
+        RecordActionLog.record_type == "driver_license_original"
+    ).order_by(RecordActionLog.timestamp.desc()).all()
