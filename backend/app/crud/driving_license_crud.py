@@ -10,9 +10,11 @@ from app.schemas.driving_license_schema import (
     DriverLicenseOriginalCreate,
     DriverLicenseOriginalUpdate,
     DriverLicenseContactCreate,
-    DriverLicenseFictitiousTrapCreate
+    DriverLicenseFictitiousTrapCreate,
+    DriverLicenseSearchQuery
 )
 from app.models.base import ActionType
+from app.models import driving_license
 
 
 # Create ops
@@ -21,7 +23,6 @@ from app.models.base import ActionType
 def create_original_record(db: Session, payload: DriverLicenseOriginalCreate):
     
     original = DriverLicenseOriginalRecord(
-        status=payload.status,
         tln=payload.tln,
         tfn=payload.tfn,
         tdl=payload.tdl,
@@ -94,6 +95,18 @@ def create_fictitious_trap(db: Session, original_record_id: int, payload: Driver
     
     return trap
 
+# search
+
+def search_driving_license(db: Session, query: DriverLicenseSearchQuery):
+    q = db.query(driving_license)
+    if query.record_id:
+        q = q.filter(driving_license.id == query.record_id)
+    if query.tdl_number:
+        q = q.filter(driving_license.tdl_number.ilike(f"%{query.tdl_number}%"))
+    if query.fdl_number:
+        q = q.filter(driving_license.fdl_number.ilike(f"%{query.fdl_number}%"))
+    return q.all()
+
 # Read OPs
 
 # get all
@@ -101,7 +114,7 @@ def get_all_records(
     db: Session,
     skip: int = 0,
     limit: int = 100,
-    status: Optional[str] = None,
+    active_status: Optional[str] = None,
     approval_status: Optional[str] = None,
     active_only: bool = True
 ):
@@ -111,8 +124,8 @@ def get_all_records(
     if active_only:
         query = query.filter(DriverLicenseOriginalRecord.active_status == True)
     
-    if status:
-        query = query.filter(DriverLicenseOriginalRecord.status == status)
+    if active_status:
+        query = query.filter(DriverLicenseOriginalRecord.active_status == active_status)
     
     if approval_status:
         query = query.filter(DriverLicenseOriginalRecord.approval_status == approval_status)
@@ -251,7 +264,29 @@ def restore_record(db: Session, record_id: int):
 
 # CONTACT
 
-# get al
+#get all (across all recs)
+def get_all_contacts(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100
+):
+    contacts = db.query(DriverLicenseContact).order_by(
+        DriverLicenseContact.created_at.desc()
+    ).offset(skip).limit(limit).all()
+    return contacts
+
+# detailed contact 
+def get_contact_by_id(db: Session, contact_id: int):
+    contact = db.query(DriverLicenseContact).filter(
+        DriverLicenseContact.id == contact_id
+    ).first()
+    
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    return contact
+
+# get all for one record
 def get_contacts_by_record(db: Session, record_id: int):
     
     contacts = db.query(DriverLicenseContact).filter(
@@ -299,6 +334,28 @@ def delete_contact(db: Session, contact_id: int):
 # FICTITIOUS TRAP
 
 # get all
+def get_all_traps(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100
+):
+    traps = db.query(DriverLicenseFictitiousTrap).order_by(
+        DriverLicenseFictitiousTrap.created_at.desc()
+    ).offset(skip).limit(limit).all()
+    return traps
+
+# single detailed record
+def get_trap_by_id(db: Session, trap_id: int):
+    trap = db.query(DriverLicenseFictitiousTrap).filter(
+        DriverLicenseFictitiousTrap.id == trap_id
+    ).first()
+    
+    if not trap:
+        raise HTTPException(status_code=404, detail="Fictitious trap not found")
+    
+    return trap
+
+# get all for one record
 def get_traps_by_record(db: Session, record_id: int):
     
     traps = db.query(DriverLicenseFictitiousTrap).filter(
@@ -306,6 +363,23 @@ def get_traps_by_record(db: Session, record_id: int):
     ).all()
     
     return traps
+
+#update 
+def update_trap(db: Session, trap_id: int, payload: DriverLicenseFictitiousTrapCreate):
+    trap = db.query(DriverLicenseFictitiousTrap).filter(
+        DriverLicenseFictitiousTrap.id == trap_id
+    ).first()
+    
+    if not trap:
+        raise HTTPException(status_code=404, detail="Fictitious trap not found")
+    
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(trap, field, value)
+    
+    db.commit()
+    db.refresh(trap)
+    return trap
 
 # delete
 def delete_trap(db: Session, trap_id: int):
@@ -327,16 +401,16 @@ def delete_trap(db: Session, trap_id: int):
 
 # get count of records by status, for dashboard
 def get_records_count(db: Session):
-    
     total = db.query(DriverLicenseOriginalRecord).count()
     active = db.query(DriverLicenseOriginalRecord).filter(
         DriverLicenseOriginalRecord.active_status == True
     ).count()
-    pending_approval = db.query(DriverLicenseOriginalRecord).filter(
-        DriverLicenseOriginalRecord.approval_status == "pending"
-    ).count()
+    
     approved = db.query(DriverLicenseOriginalRecord).filter(
         DriverLicenseOriginalRecord.approval_status == "approved"
+    ).count()
+    pending = db.query(DriverLicenseOriginalRecord).filter(
+        DriverLicenseOriginalRecord.approval_status == "pending"
     ).count()
     rejected = db.query(DriverLicenseOriginalRecord).filter(
         DriverLicenseOriginalRecord.approval_status == "rejected"
@@ -346,7 +420,7 @@ def get_records_count(db: Session):
         "total": total,
         "active": active,
         "inactive": total - active,
-        "pending_approval": pending_approval,
         "approved": approved,
+        "pending": pending,
         "rejected": rejected
     }
