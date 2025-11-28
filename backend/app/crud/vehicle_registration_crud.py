@@ -38,7 +38,23 @@ def create_master_record(db, payload: MasterCreateRequest):
         body_type=payload.body_type,
         type_license=payload.type_license,
         type_vehicle=payload.type_vehicle,
-        active_status=payload.active_status
+        active_status=payload.active_status,
+        expiration_date=payload.expiration_date,
+        date_issued = payload.date_issued,
+        date_received = payload.date_received,
+        date_fee_received = payload.date_fee_received,
+        amount_paid = payload.amount_paid,
+        amount_due = payload.amount_due,
+        amount_received = payload.amount_received,
+        use_tax = payload.use_tax,
+        sticker_issued = payload.sticker_issued,
+        sticker_numbers = payload.sticker_numbers,
+        cert_type = payload.cert_type,            
+        mp =payload.mp,               
+        mo =payload.mo,                    
+        axl =payload.axl,                  
+        wc =payload.wc,                    
+        cc_alco = payload.cc_alco,
     )
     db.add(master)
     db.commit()
@@ -219,8 +235,8 @@ def get_vehicle_master_details(db: Session, master_id: str):
         .filter(VehicleRegistrationMaster.id == master_id)
         .options(
             joinedload(VehicleRegistrationMaster.contacts),
-            joinedload(VehicleRegistrationMaster.reciprocal_issued),
-            joinedload(VehicleRegistrationMaster.reciprocal_received),
+            # joinedload(VehicleRegistrationMaster.reciprocal_issued),  # these two are removed for now since relations has been removed temporarily
+            # joinedload(VehicleRegistrationMaster.reciprocal_received),
             joinedload(VehicleRegistrationMaster.undercover_records)
             .subqueryload(VehicleRegistrationUnderCover.trap_info),
             joinedload(VehicleRegistrationMaster.fictitious_records)

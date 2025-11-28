@@ -225,6 +225,23 @@ class BaseVehicleRegistrationCreate(BaseModel):
     make: Optional[str] = None
     year_model: Optional[str] = None
     active_status: Optional[bool] = True
+    expiration_date: Optional[date] = None
+    date_issued : Optional[date] = None
+    date_received : Optional[date] = None
+    date_fee_received : Optional[date] = None
+    amount_paid : Optional[float] = None
+    amount_due : Optional[float] = None
+    amount_received : Optional[float] = None
+    use_tax : Optional[float] = None
+    sticker_issued : Optional[str] = None
+    sticker_numbers : Optional[str] = None
+
+    cert_type : Optional[str] = None
+    mp : Optional[str] = None
+    mo : Optional[str] = None                           
+    axl : Optional[str] = None
+    wc : Optional[str] = None                       
+    cc_alco : Optional[str] = None
 
 class MasterCreateRequest(BaseVehicleRegistrationCreate):
     model: Optional[str] = None
@@ -250,31 +267,9 @@ class FictitiousCreateRequest(BaseVehicleRegistrationCreate):
 
 
 class MasterDropdownResponse(BaseModel):
-    id: str
+    id: int
     vehicle_id_number: str
     registered_owner: str
-
-class UnderCoverResponse(BaseModel):
-    id: int
-    master_record_id: str
-    vehicle_id_number: str
-    license_number: Optional[str]
-    registered_owner: Optional[str]
-    active_status: bool
-    
-    class Config:
-        from_attributes = True
-
-class FictitiousResponse(BaseModel):
-    id: int
-    master_record_id: str
-    vehicle_id_number: str  # auto-fetched from master
-    license_number: Optional[str]
-    registered_owner: Optional[str]
-    active_status: bool
-    
-    class Config:
-        from_attributes = True
 
 # bulk operations request schema
 class BulkActionRequest(BaseModel):
