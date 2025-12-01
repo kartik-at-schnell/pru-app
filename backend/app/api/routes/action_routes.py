@@ -214,3 +214,6 @@ def bulk_inactive_route(
         message=f"Successfully deactivated {updated_count} records"
     )
     return ApiResponse[BulkActionResponse](data=response_data)
+
+
+

@@ -49,3 +49,10 @@ def register_new_user(
         )
     new_user = user_crud.create_user(db=db, user=user_in)
     return new_user
+
+router = APIRouter(prefix="/roles", tags=["Roles"])
+
+@router.get("/user/{email}", response_model=user_schema.UserRoleResponse)
+def get_user_roles(email: str, db: Session = Depends(get_db)):
+    roles = user_crud.get_roles_by_email(db, email)
+    return {"email": email, "roles": roles}

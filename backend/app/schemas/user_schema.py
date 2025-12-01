@@ -44,3 +44,32 @@ class TokenData(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    
+    
+class RoleCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+
+class RoleUpdate(BaseModel):
+    description: Optional[str] = None
+
+
+class RoleResponse(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+class AssignRoleRequest(BaseModel):
+    email: str
+    role_name: str
+
+
+class UserRoleResponse(BaseModel):
+    email: str
+    roles: list[str]
+   
