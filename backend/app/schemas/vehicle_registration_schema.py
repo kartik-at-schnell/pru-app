@@ -1,5 +1,5 @@
 from decimal import Decimal
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime, date
 from typing import Optional, List
 from pydantic import Field, field_validator
@@ -15,50 +15,50 @@ class VehicleRegistrationContact(BaseModel):
     department: Optional[str] = None
     email: Optional[str] = None
     phone_number: Optional[str] = None
+    address: Optional[str] = None
+    alt_contact_1: Optional[str] = None
+    alt_contact_2: Optional[str] = None
+    alt_contact_3: Optional[str] = None
+    alt_contact_4: Optional[str] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationReciprocalIssued(BaseModel):
     id: int
     description: Optional[str] = None
-    license_number: Optional[str] = None
-    states: Optional[str] = None
+    license_plate: Optional[str] = None
+    state: Optional[str] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationReciprocalReceived(BaseModel):
     id: int
     description: Optional[str] = None
-    license_number: Optional[str] = None
-    states: Optional[str] = None
+    license_plate: Optional[str] = None
+    state: Optional[str] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationUnderCoverTrapInfo(BaseModel):
     id: int
     date: Optional[datetime] = None
     number: Optional[str] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationFictitiousTrapInfo(BaseModel):
     id: int
     date: Optional[datetime] = None
     number: Optional[str] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # parent tables(these have their own child)
 class VehicleRegistrationUnderCover(BaseModel):
     id: int
     license_number: Optional[str] = None
     vehicle_id_number: Optional[str] = None
-    register_owner: Optional[str] = None
+    registered_owner: Optional[str] = None
     status: Optional[str] = None
     
     #trap_info will be a LIST of the schema i defined above
@@ -71,7 +71,7 @@ class VehicleRegistrationFictitious(BaseModel):
     id: int
     license_number: Optional[str] = None
     vehicle_id_number: Optional[str] = None
-    register_owner: Optional[str] = None
+    registered_owner: Optional[str] = None
     status: Optional[str] = None
     
     trap_info: List[VehicleRegistrationFictitiousTrapInfo] = []
@@ -178,38 +178,66 @@ class VehicleRegistrationMasterDetails(VehicleRegistrationMaster):
 class VehicleRegistrationUnderCoverCreateBody(BaseModel):
     license_number: Optional[str]
     vehicle_id_number: Optional[str]
-    register_owner: Optional[str]
+    registered_owner: Optional[str]
     status: Optional[str] = "Pending"
+
+    model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationFictitiousCreateBody(BaseModel):
     license_number: Optional[str]
     vehicle_id_number: Optional[str]
-    register_owner: Optional[str]
+    registered_owner: Optional[str]
     status: Optional[str] = "Pending"
+
+    model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationContactCreateBody(BaseModel):
     contact_name: Optional[str] = None
     department: Optional[str] = None
     email: Optional[str] = None
     phone_number: Optional[str] = None
+    address: Optional[str] = None
+    alt_contact_1: Optional[str] = None
+    alt_contact_2: Optional[str] = None
+    alt_contact_3: Optional[str] = None
+    alt_contact_4: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationReciprocalIssuedCreateBody(BaseModel):
     description: Optional[str] = None
     license_number: Optional[str] = None
-    states: Optional[str] = None
+    state: Optional[str] = None
+    year_of_renewal: Optional[int] = None
+    cancellation_date: Optional[date] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationReciprocalReceivedCreateBody(BaseModel):
     description: Optional[str] = None
     license_number: Optional[str] = None
-    states: Optional[str] = None
+    state: Optional[str] = None
+    year_of_renewal: Optional[int] = None
+    
+    model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationUnderCoverTrapInfoCreateBody(BaseModel):
-    date: Optional[datetime] = None
+    date: Optional[date] = None
     number: Optional[str] = None
+    officer: Optional[str] = None
+    location: Optional[str] = None
+    details: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationFictitiousTrapInfoCreateBody(BaseModel):
-    date: Optional[datetime] = None
+    date: Optional[date] = None
     number: Optional[str] = None
+    officer: Optional[str] = None
+    location: Optional[str] = None
+    reason: Optional[str] = None
+    
+    model_config = ConfigDict(from_attributes=True)
 
 # new schemas
 
