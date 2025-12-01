@@ -44,7 +44,7 @@ class DriverLicenseContactBase(BaseModel):
 
 
 class DriverLicenseFictitiousTrapBase(BaseModel):
-    date: Optional[date] = None
+    # date: Optional[date] = None
     number: Optional[str] = None
     fictitious_id_2: Optional[int] = None
     test: Optional[str] = None
@@ -64,7 +64,7 @@ class DriverLicenseFictitiousTrapBase(BaseModel):
     folder_child_count: Optional[int] = None
     label_setting: Optional[str] = None
     retention_label: Optional[str] = None
-    retention_label_applied: Optional[date] = None
+    # retention_label_applied: Optional[date] = None
     label_applied_by: Optional[str] = None
     item_is_record: Optional[bool] = None
     app_created_by: Optional[str] = None

@@ -85,8 +85,29 @@ def create_fictitious_trap(db: Session, original_record_id: int, payload: Driver
     
     trap = DriverLicenseFictitiousTrap(
         original_record_id=original_record_id,
+        # mandatory fields
         date=payload.date,
-        number=payload.number
+        number=payload.number,
+        fictitious_id_2=payload.fictitious_id_2,
+        # 0ptional fields
+        test=payload.test,
+        title=payload.title,
+        compliance_asset_id=payload.compliance_asset_id,
+        color_tag=payload.color_tag,
+        test2=payload.test2,
+        content_type=payload.content_type,
+        attachments=payload.attachments,
+        type=payload.type,
+        item_child_count=payload.item_child_count,
+        folder_child_count=payload.folder_child_count,
+        label_setting=payload.label_setting,
+        retention_label=payload.retention_label,
+        retention_label_applied=payload.retention_label_applied,
+        label_applied_by=payload.label_applied_by,
+        item_is_record=payload.item_is_record,
+        app_created_by=payload.app_created_by,
+        app_modified_by=payload.app_modified_by,
+        version=payload.version
     )
     
     db.add(trap)

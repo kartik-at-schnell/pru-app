@@ -25,7 +25,7 @@ def create_suppression(db: Session, suppression: RecordSuppressionCreate) -> Rec
         expiration_date=suppression.expiration_date,
         created_by=suppression.created_by,
         status="active",
-        is_active=1
+        is_active=True
     )
     db.add(db_suppression)
     db.commit()

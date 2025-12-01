@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
-from datetime import datetime
+from datetime import date, datetime
 
 # detailed 1
 
@@ -54,8 +54,8 @@ class RecordSuppressionBase(BaseModel):
     record_id: Optional[int] = Field(None, description="Optional link to actual VR/DL record")
     reason: str
     reason_description: Optional[str] = None
-    effective_date: Optional[datetime] = None
-    expiration_date: Optional[datetime] = None
+    effective_date: Optional[date] = None
+    expiration_date: Optional[date] = None
 
 class RecordSuppressionCreate(RecordSuppressionBase):
     created_by: str
@@ -63,7 +63,7 @@ class RecordSuppressionCreate(RecordSuppressionBase):
 class RecordSuppressionUpdate(BaseModel):
     reason: Optional[str] = None
     reason_description: Optional[str] = None
-    expiration_date: Optional[datetime] = None
+    expiration_date: Optional[date] = None
     status: Optional[str] = None
 
 class RecordSuppressionResponse(RecordSuppressionBase):
