@@ -191,7 +191,6 @@ def get_masters_dropdown(
     "/{master_id}/contacts",
     response_model=ApiResponse[VehicleRegistrationContact],
     summary="Create a new contact for a master record",
-    tags=["Contacts"]
 )
 def create_vehicle_contact(
     master_id: int,
@@ -225,7 +224,6 @@ def create_vehicle_contact(
     "/{master_id}/contacts",
     response_model=ApiResponse[List[VehicleRegistrationContact]],
     summary="Get all contacts for a master record",
-    tags=["Contacts"]
 )
 def get_vehicle_contacts(
     master_id: int,
@@ -260,7 +258,6 @@ def get_vehicle_contacts(
     "/contacts/{contact_id}",
     response_model=ApiResponse[VehicleRegistrationContact],
     summary="Get a single contact by ID",
-    tags=["Contacts"]
 )
 def get_single_contact(
     contact_id: int,
@@ -292,7 +289,6 @@ def get_single_contact(
     "/contacts/{contact_id}",
     response_model=ApiResponse[VehicleRegistrationContact],
     summary="Update a contact",
-    tags=["Contacts"]
 )
 def update_vehicle_contact(
     contact_id: int,
@@ -326,7 +322,6 @@ def update_vehicle_contact(
     "/contacts/{contact_id}",
     response_model=ApiResponse,
     summary="Delete a contact",
-    tags=["Contacts"]
 )
 def delete_vehicle_contact(
     contact_id: int,
@@ -358,7 +353,6 @@ def delete_vehicle_contact(
     "/contacts",
     response_model=ApiResponse[List[VehicleRegistrationContact]],
     summary="Get all contacts (paginated)",
-    tags=["Contacts"]
 )
 def list_all_contacts(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
@@ -390,7 +384,6 @@ def list_all_contacts(
 @router.post(
     "/{master_id}/reciprocal-issued",
     response_model=ApiResponse[VehicleRegistrationReciprocalIssued],
-    tags=["Reciprocal Issued"]
 )
 def create_ri(
     master_id: int,
@@ -418,7 +411,6 @@ def create_ri(
 @router.get(
     "/{master_id}/reciprocal-issued",
     response_model=ApiResponse[List[VehicleRegistrationReciprocalIssued]],
-    tags=["Reciprocal Issued"]
 )
 def list_ri_for_master(
     master_id: int,
@@ -441,7 +433,6 @@ def list_ri_for_master(
 @router.get(
     "/reciprocal-issued/{reciprocal_id}",
     response_model=ApiResponse[VehicleRegistrationReciprocalIssued],
-    tags=["Reciprocal Issued"]
 )
 def get_ri(
     reciprocal_id: int,
@@ -464,7 +455,6 @@ def get_ri(
 @router.put(
     "/reciprocal-issued/{reciprocal_id}",
     response_model=ApiResponse[VehicleRegistrationReciprocalIssued],
-    tags=["Reciprocal Issued"]
 )
 def update_ri(
     reciprocal_id: int,
@@ -488,7 +478,6 @@ def update_ri(
 @router.delete(
     "/reciprocal-issued/{reciprocal_id}",
     response_model=ApiResponse,
-    tags=["Reciprocal Issued"]
 )
 def delete_ri(
     reciprocal_id: int,
@@ -510,7 +499,6 @@ def delete_ri(
 @router.get(
     "/reciprocal-issued",
     response_model=ApiResponse[List[VehicleRegistrationReciprocalIssued]],
-    tags=["Reciprocal Issued"]
 )
 def list_all_ri(
     skip: int = Query(0, ge=0),
@@ -529,12 +517,11 @@ def list_all_ri(
         )
 
 
-# reciprocal received uc
+# reciprocal received
 
 @router.post(
     "/{master_id}/reciprocal-received",
-    response_model=ApiResponse[VehicleRegistrationReciprocalReceived],
-    tags=["Reciprocal Received"]
+    response_model=ApiResponse[VehicleRegistrationReciprocalReceived]
 )
 def create_rr(
     master_id: int,
@@ -561,8 +548,7 @@ def create_rr(
 
 @router.get(
     "/{master_id}/reciprocal-received",
-    response_model=ApiResponse[List[VehicleRegistrationReciprocalReceived]],
-    tags=["Reciprocal Received"]
+    response_model=ApiResponse[List[VehicleRegistrationReciprocalReceived]]
 )
 def list_rr_for_master(
     master_id: int,
@@ -584,8 +570,7 @@ def list_rr_for_master(
 
 @router.get(
     "/reciprocal-received/{reciprocal_id}",
-    response_model=ApiResponse[VehicleRegistrationReciprocalReceived],
-    tags=["Reciprocal Received"]
+    response_model=ApiResponse[VehicleRegistrationReciprocalReceived]
 )
 def get_rr(
     reciprocal_id: int,
@@ -607,8 +592,7 @@ def get_rr(
 
 @router.put(
     "/reciprocal-received/{reciprocal_id}",
-    response_model=ApiResponse[VehicleRegistrationReciprocalReceived],
-    tags=["Reciprocal Received"]
+    response_model=ApiResponse[VehicleRegistrationReciprocalReceived]
 )
 def update_rr(
     reciprocal_id: int,
@@ -631,8 +615,7 @@ def update_rr(
 
 @router.delete(
     "/reciprocal-received/{reciprocal_id}",
-    response_model=ApiResponse,
-    tags=["Reciprocal Received"]
+    response_model=ApiResponse
 )
 def delete_rr(
     reciprocal_id: int,
@@ -653,8 +636,7 @@ def delete_rr(
 
 @router.get(
     "/reciprocal-received",
-    response_model=ApiResponse[List[VehicleRegistrationReciprocalReceived]],
-    tags=["Reciprocal Received"]
+    response_model=ApiResponse[List[VehicleRegistrationReciprocalReceived]]
 )
 def list_all_rr(
     skip: int = Query(0, ge=0),
@@ -677,8 +659,7 @@ def list_all_rr(
 
 @router.post(
     "/undercover/{undercover_id}/trap-info",
-    response_model=ApiResponse[VehicleRegistrationUnderCoverTrapInfo],
-    tags=["Trap Info UC"]
+    response_model=ApiResponse[VehicleRegistrationUnderCoverTrapInfo]
 )
 def create_ti_uc(
     undercover_id: int,
@@ -705,8 +686,7 @@ def create_ti_uc(
 
 @router.get(
     "/undercover/{undercover_id}/trap-info",
-    response_model=ApiResponse[List[VehicleRegistrationUnderCoverTrapInfo]],
-    tags=["Trap Info UC"]
+    response_model=ApiResponse[List[VehicleRegistrationUnderCoverTrapInfo]]
 )
 def list_ti_uc_for_undercover(
     undercover_id: int,
@@ -728,8 +708,7 @@ def list_ti_uc_for_undercover(
 
 @router.get(
     "/trap-info-uc/{trap_info_id}",
-    response_model=ApiResponse[VehicleRegistrationUnderCoverTrapInfo],
-    tags=["Trap Info UC"]
+    response_model=ApiResponse[VehicleRegistrationUnderCoverTrapInfo]
 )
 def get_ti_uc(
     trap_info_id: int,
@@ -751,8 +730,7 @@ def get_ti_uc(
 
 @router.put(
     "/trap-info-uc/{trap_info_id}",
-    response_model=ApiResponse[VehicleRegistrationUnderCoverTrapInfo],
-    tags=["Trap Info UC"]
+    response_model=ApiResponse[VehicleRegistrationUnderCoverTrapInfo]
 )
 def update_ti_uc(
     trap_info_id: int,
@@ -775,8 +753,7 @@ def update_ti_uc(
 
 @router.delete(
     "/trap-info-uc/{trap_info_id}",
-    response_model=ApiResponse,
-    tags=["Trap Info UC"]
+    response_model=ApiResponse
 )
 def delete_ti_uc(
     trap_info_id: int,
@@ -797,8 +774,7 @@ def delete_ti_uc(
 
 @router.get(
     "/trap-info-uc",
-    response_model=ApiResponse[List[VehicleRegistrationUnderCoverTrapInfo]],
-    tags=["Trap Info UC"]
+    response_model=ApiResponse[List[VehicleRegistrationUnderCoverTrapInfo]]
 )
 def list_all_ti_uc(
     skip: int = Query(0, ge=0),
@@ -821,8 +797,7 @@ def list_all_ti_uc(
 
 @router.post(
     "/fictitious/{fictitious_id}/trap-info",
-    response_model=ApiResponse[VehicleRegistrationFictitiousTrapInfo],
-    tags=["Trap Info FC"]
+    response_model=ApiResponse[VehicleRegistrationFictitiousTrapInfo]
 )
 def create_ti_fc(
     fictitious_id: int,
@@ -849,8 +824,7 @@ def create_ti_fc(
 
 @router.get(
     "/fictitious/{fictitious_id}/trap-info",
-    response_model=ApiResponse[List[VehicleRegistrationFictitiousTrapInfo]],
-    tags=["Trap Info FC"]
+    response_model=ApiResponse[List[VehicleRegistrationFictitiousTrapInfo]]
 )
 def list_ti_fc_for_fictitious(
     fictitious_id: int,
@@ -872,8 +846,7 @@ def list_ti_fc_for_fictitious(
 
 @router.get(
     "/trap-info-fc/{trap_info_id}",
-    response_model=ApiResponse[VehicleRegistrationFictitiousTrapInfo],
-    tags=["Trap Info FC"]
+    response_model=ApiResponse[VehicleRegistrationFictitiousTrapInfo]
 )
 def get_ti_fc(
     trap_info_id: int,
@@ -895,8 +868,7 @@ def get_ti_fc(
 
 @router.put(
     "/trap-info-fc/{trap_info_id}",
-    response_model=ApiResponse[VehicleRegistrationFictitiousTrapInfo],
-    tags=["Trap Info FC"]
+    response_model=ApiResponse[VehicleRegistrationFictitiousTrapInfo]
 )
 def update_ti_fc(
     trap_info_id: int,
@@ -919,8 +891,7 @@ def update_ti_fc(
 
 @router.delete(
     "/trap-info-fc/{trap_info_id}",
-    response_model=ApiResponse,
-    tags=["Trap Info FC"]
+    response_model=ApiResponse
 )
 def delete_ti_fc(
     trap_info_id: int,
@@ -941,8 +912,7 @@ def delete_ti_fc(
 
 @router.get(
     "/trap-info-fc",
-    response_model=ApiResponse[List[VehicleRegistrationFictitiousTrapInfo]],
-    tags=["Trap Info FC"]
+    response_model=ApiResponse[List[VehicleRegistrationFictitiousTrapInfo]]
 )
 def list_all_ti_fc(
     skip: int = Query(0, ge=0),

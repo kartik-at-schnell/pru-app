@@ -251,7 +251,7 @@ class BaseVehicleRegistrationCreate(BaseModel):
     state: Optional[str] = None
     zip_code: Optional[str] = None
     make: Optional[str] = None
-    year_model: Optional[str] = None
+    year_model: Optional[int] = None
     active_status: Optional[bool] = True
     expiration_date: Optional[date] = None
     date_issued : Optional[date] = None
@@ -263,6 +263,7 @@ class BaseVehicleRegistrationCreate(BaseModel):
     use_tax : Optional[float] = None
     sticker_issued : Optional[str] = None
     sticker_numbers : Optional[str] = None
+    body_type: Optional[str]
 
     cert_type : Optional[str] = None
     mp : Optional[str] = None
@@ -273,7 +274,6 @@ class BaseVehicleRegistrationCreate(BaseModel):
 
 class MasterCreateRequest(BaseVehicleRegistrationCreate):
     model: Optional[str] = None
-    body_type: Optional[str]
     type_license: Optional[str] = None
     type_vehicle: Optional[str] = None
 
