@@ -25,7 +25,7 @@ class VehicleRegistrationContact(BaseModel):
 
 class VehicleRegistrationReciprocalIssued(BaseModel):
     id: int
-    master_record_id: int
+    master_record_id: Optional[int] = None
     description: Optional[str] = None
     license_plate: Optional[str] = None
     issuing_state: Optional[str] = None
@@ -39,9 +39,9 @@ class VehicleRegistrationReciprocalIssued(BaseModel):
 
 class VehicleRegistrationReciprocalReceived(BaseModel):
     id: int
+    master_record_id: Optional[int] = None
     description: Optional[str] = None
     license_plate: Optional[str] = None
-    state: Optional[str] = None
     issuing_state: Optional[str] = None
     recipient_state: Optional[str] = None
     year_of_renewal: Optional[int] = None
@@ -224,6 +224,7 @@ class VehicleRegistrationContactCreateBody(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationReciprocalIssuedCreateBody(BaseModel):
+    master_record_id: Optional[int] = None
     description: Optional[str] = None
     license_number: Optional[str] = None
     issuing_state: Optional[str] = None
@@ -236,13 +237,14 @@ class VehicleRegistrationReciprocalIssuedCreateBody(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationReciprocalReceivedCreateBody(BaseModel):
+    master_record_id: Optional[int] = None
     description: Optional[str] = None
     license_number: Optional[str] = None
     issuing_state: Optional[str] = None
     recipient_state: Optional[str] = None
     year_of_renewal: Optional[int] = None
     cancellation_date: Optional[date] = None
-    received_date: Optional[date] = None
+    recieved_date: Optional[date] = None
     sticker_number: Optional[str] = None
     issuing_authority: Optional[str] = None
     

@@ -382,17 +382,16 @@ def list_all_contacts(
 
 # reciprocal issued uc
 @router.post(
-    "/{master_id}/reciprocal-issued",
+    "/reciprocal-issued",
     response_model=ApiResponse[VehicleRegistrationReciprocalIssued],
 )
 def create_ri(
-    master_id: int,
     payload: VehicleRegistrationReciprocalIssuedCreateBody,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(get_current_user)
 ):
     try:
-        result = create_reciprocal_issued(db, master_id, payload)
+        result = create_reciprocal_issued(db, payload)
         data = VehicleRegistrationReciprocalIssued.model_validate(result)
         return ApiResponse(
             status="success",
@@ -520,17 +519,16 @@ def list_all_ri(
 # reciprocal received
 
 @router.post(
-    "/{master_id}/reciprocal-received",
+    "/reciprocal-received",
     response_model=ApiResponse[VehicleRegistrationReciprocalReceived]
 )
 def create_rr(
-    master_id: int,
     payload: VehicleRegistrationReciprocalReceivedCreateBody,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(get_current_user)
 ):
     try:
-        result = create_reciprocal_received(db, master_id, payload)
+        result = create_reciprocal_received(db, payload)
         data = VehicleRegistrationReciprocalReceived.model_validate(result)
         return ApiResponse(
             status="success",
