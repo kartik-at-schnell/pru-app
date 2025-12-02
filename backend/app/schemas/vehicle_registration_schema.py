@@ -264,6 +264,7 @@ class BaseVehicleRegistrationCreate(BaseModel):
     sticker_issued : Optional[str] = None
     sticker_numbers : Optional[str] = None
     body_type: Optional[str]
+    model: Optional[str] = None
 
     cert_type : Optional[str] = None
     mp : Optional[str] = None
@@ -273,7 +274,6 @@ class BaseVehicleRegistrationCreate(BaseModel):
     cc_alco : Optional[str] = None
 
 class MasterCreateRequest(BaseVehicleRegistrationCreate):
-    model: Optional[str] = None
     type_license: Optional[str] = None
     type_vehicle: Optional[str] = None
 
@@ -288,10 +288,14 @@ class UnderCoverCreateRequest(BaseVehicleRegistrationCreate):
 
 class FictitiousCreateRequest(BaseVehicleRegistrationCreate):
     master_record_id: int
-    model: Optional[str] = None
-    vlp_class: str
+    vlp_class: Optional[str] = None
     amount_due: Optional[float] = None
     amount_received: Optional[float] = None
+    class_type: Optional[str] = None
+    type_license: Optional[str] = None
+    expiration_date: Optional[date] = None
+    date_fee_received: Optional[date] = func.now()
+    amount_paid: Optional[float] = None
 
 
 class MasterDropdownResponse(BaseModel):
