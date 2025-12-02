@@ -4,29 +4,68 @@ from typing import List, Optional, Union
 from app.database import get_db
 
 from app.crud.vehicle_registration_crud import (
+    create_contact,
     create_master_record,
+    create_reciprocal_issued,
+    create_reciprocal_received,
+    create_trap_info_fictitious,
+    create_trap_info_undercover,
     create_undercover_record,
     create_fictitious_record,
+    delete_reciprocal_issued,
+    delete_reciprocal_received,
+    delete_trap_info_fictitious,
+    delete_trap_info_undercover,
+    get_all_contacts,
     get_all_masters_for_dropdown,
+    get_all_reciprocal_issued,
+    get_all_reciprocal_received,
+    get_all_trap_info_fictitious,
+    get_all_trap_info_undercover,
     get_all_vehicles,
+    get_contact,
+    get_contacts_by_master,
+    get_reciprocal_issued,
+    get_reciprocal_issued_by_master,
+    get_reciprocal_received,
+    get_reciprocal_received_by_master,
+    get_trap_info_fictitious,
+    get_trap_info_fictitious_by_fc,
+    get_trap_info_undercover,
+    get_trap_info_undercover_by_uc,
     get_vehicle_master_details,
+    update_reciprocal_issued,
+    update_reciprocal_received,
+    update_trap_info_fictitious,
+    update_trap_info_undercover,
     update_vehicle_record
 )
 
 from app.schemas.vehicle_registration_schema import(
     FictitiousCreateRequest,
     UnderCoverCreateRequest,
+    VehicleRegistrationContact,
+    VehicleRegistrationContactCreateBody,
     VehicleRegistrationFictitiousResponse,
+    VehicleRegistrationFictitiousTrapInfo,
+    VehicleRegistrationFictitiousTrapInfoCreateBody,
     VehicleRegistrationMasterBase,
     VehicleRegistrationMasterDetails,
     VehicleRegistrationMasterResponse,
+    VehicleRegistrationReciprocalIssued,
+    VehicleRegistrationReciprocalIssuedCreateBody,
+    VehicleRegistrationReciprocalReceived,
+    VehicleRegistrationReciprocalReceivedCreateBody,
     VehicleRegistrationUnderCoverResponse,
     MasterCreateRequest,
+    VehicleRegistrationUnderCoverTrapInfo,
+    VehicleRegistrationUnderCoverTrapInfoCreateBody,
 )
 from app.security import get_current_user
 
 from app.schemas.base_schema import ApiResponse
 from app.models import user_models
+from app.crud.driving_license_crud import delete_contact, update_contact
 
 router = APIRouter(prefix="/vehicle-registration", tags=["Vehicle Registration"])
     
@@ -147,74 +186,746 @@ def get_masters_dropdown(
     return [{"id": m[0], "vin": m[1], "owner": m[2]} for m in masters]
 
 
-# @router.get("/undercover/master/{master_id}")
-# def get_uc_by_master(
-#     master_id: str,
-#     db: Session = Depends(get_db),
-#     current_user = Depends(get_current_user)
-# ):
-#     records = get_undercover_by_master(db, master_id)
-#     return {"master_id": master_id, "count": len(records), "records": records}
+# create new contact for master record
+@router.post(
+    "/{master_id}/contacts",
+    response_model=ApiResponse[VehicleRegistrationContact],
+    summary="Create a new contact for a master record",
+)
+def create_vehicle_contact(
+    master_id: int,
+    payload: VehicleRegistrationContactCreateBody,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        result = create_contact(db, master_id, payload)
 
-# @router.post("/undercover/{uc_id}/mark-active")
-# def mark_uc_active(
-#     uc_id: int,
-#     db: Session = Depends(get_db),
-#     current_user = Depends(get_current_user)
-# ):
-#     mark_undercover_active(db, uc_id)
-#     return {"status": "marked active", "uc_id": uc_id}
+        contact_response = VehicleRegistrationContact.model_validate(result)
 
-# @router.post("/undercover/{uc_id}/mark-inactive")
-# def mark_uc_inactive(
-#     uc_id: int,
-#     db: Session = Depends(get_db),
-#     current_user = Depends(get_current_user)
-# ):
-#     mark_undercover_inactive(db, uc_id)
-#     return {"status": "marked inactive", "uc_id": uc_id}
-
-
-# @router.get("/fictitious/master/{master_id}")
-# def get_fc_by_master(
-#     master_id: str,
-#     db: Session = Depends(get_db),
-#     current_user = Depends(get_current_user)
-# ):
-#     records = get_fictitious_by_master(db, master_id)
-#     return {"master_id": master_id, "count": len(records), "records": records}
-
-# @router.post("/fictitious/{fc_id}/mark-active")
-# def mark_fc_active(
-#     fc_id: int,
-#     db: Session = Depends(get_db),
-#     current_user = Depends(get_current_user)
-# ):
-#     mark_fictitious_active(db, fc_id)
-#     return {"status": "marked active", "fc_id": fc_id}
-
-# @router.post("/fictitious/{fc_id}/mark-inactive")
-# def mark_fc_inactive(
-#     fc_id: int,
-#     db: Session = Depends(get_db),
-#     current_user = Depends(get_current_user)
-# ):
-#     mark_fictitious_inactive(db, fc_id)
-#     return {"status": "marked inactive", "fc_id": fc_id}
-
-
-# # bulk delete
-# @router.delete("/bulk-delete", response_model=ApiResponse[BulkActionResponse])
-# def bulk_delete_route(
-#     request: BulkActionRequest,
-#     db: Session = Depends(get_db),
-#     current_user: user_models.User = Depends(get_current_user)
-# ):
-#     deleted_count = bulk_delete(db, request.record_ids)
+        return ApiResponse(
+            status="success",
+            message=f"Contact created successfully",
+            data=contact_response
+        )
     
-#     response_data = BulkActionResponse(
-#         success_count=deleted_count,
-#         failed_count=len(request.record_ids) - deleted_count,
-#         message=f"Successfully deleted {deleted_count} records"
-#     )
-#     return ApiResponse[BulkActionResponse](data=response_data)
+    except HTTPException as e:
+        raise e
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create contact: {str(e)}"
+        )
+
+
+# get all contacts for a specific master record
+@router.get(
+    "/{master_id}/contacts",
+    response_model=ApiResponse[List[VehicleRegistrationContact]],
+    summary="Get all contacts for a master record",
+)
+def get_vehicle_contacts(
+    master_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+
+    try:
+        contacts = get_contacts_by_master(db, master_id)
+
+        contacts_response = [
+            VehicleRegistrationContact.model_validate(c) for c in contacts
+        ]
+
+        return ApiResponse(
+            status="success",
+            data=contacts_response
+        )
+    
+    except HTTPException as e:
+        raise e
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve contacts: {str(e)}"
+        )
+
+
+# get single by id
+@router.get(
+    "/contacts/{contact_id}",
+    response_model=ApiResponse[VehicleRegistrationContact],
+    summary="Get a single contact by ID",
+)
+def get_single_contact(
+    contact_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        contact = get_contact(db, contact_id)
+
+        contact_response = VehicleRegistrationContact.model_validate(contact)
+
+        return ApiResponse(
+            status="success",
+            data=contact_response
+        )
+    
+    except HTTPException as e:
+        raise e
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve contact: {str(e)}"
+        )
+
+
+# Update
+@router.put(
+    "/contacts/{contact_id}",
+    response_model=ApiResponse[VehicleRegistrationContact],
+    summary="Update a contact",
+)
+def update_vehicle_contact(
+    contact_id: int,
+    payload: VehicleRegistrationContactCreateBody,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        result = update_contact(db, contact_id, payload)
+
+        contact_response = VehicleRegistrationContact.model_validate(result)
+        
+        return ApiResponse(
+            status="success",
+            message=f"Contact {contact_id} updated successfully",
+            data=contact_response
+        )
+    
+    except HTTPException as e:
+        # Contact not found
+        raise e
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update contact: {str(e)}"
+        )
+
+# delete
+@router.delete(
+    "/contacts/{contact_id}",
+    response_model=ApiResponse,
+    summary="Delete a contact",
+)
+def delete_vehicle_contact(
+    contact_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+
+        result = delete_contact(db, contact_id)    
+
+        return ApiResponse(
+            status="success",
+            message=f"Contact deleted successfully",
+            data=result
+        )
+    
+    except HTTPException as e:
+        raise e
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete contact: {str(e)}"
+        )
+
+
+# get al
+@router.get(
+    "/contacts",
+    response_model=ApiResponse[List[VehicleRegistrationContact]],
+    summary="Get all contacts (paginated)",
+)
+def list_all_contacts(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum records to return"),
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+
+        contacts = get_all_contacts(db, skip=skip, limit=limit)
+
+        contacts_response = [
+            VehicleRegistrationContact.model_validate(c) for c in contacts
+        ]
+        
+        return ApiResponse(
+            status="success",
+            data=contacts_response
+        )
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve contacts: {str(e)}"
+        )
+
+
+# reciprocal issued uc
+@router.post(
+    "/{master_id}/reciprocal-issued",
+    response_model=ApiResponse[VehicleRegistrationReciprocalIssued],
+)
+def create_ri(
+    master_id: int,
+    payload: VehicleRegistrationReciprocalIssuedCreateBody,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        result = create_reciprocal_issued(db, master_id, payload)
+        data = VehicleRegistrationReciprocalIssued.model_validate(result)
+        return ApiResponse(
+            status="success",
+            message="Reciprocal Issued created successfully",
+            data=data
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create Reciprocal Issued: {str(e)}"
+        )
+
+
+@router.get(
+    "/{master_id}/reciprocal-issued",
+    response_model=ApiResponse[List[VehicleRegistrationReciprocalIssued]],
+)
+def list_ri_for_master(
+    master_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        reciprocals = get_reciprocal_issued_by_master(db, master_id)
+        data = [VehicleRegistrationReciprocalIssued.model_validate(r) for r in reciprocals]
+        return ApiResponse(status="success", data=data)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve Reciprocal Issued: {str(e)}"
+        )
+
+
+@router.get(
+    "/reciprocal-issued/{reciprocal_id}",
+    response_model=ApiResponse[VehicleRegistrationReciprocalIssued],
+)
+def get_ri(
+    reciprocal_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        reciprocal = get_reciprocal_issued(db, reciprocal_id)
+        data = VehicleRegistrationReciprocalIssued.model_validate(reciprocal)
+        return ApiResponse(status="success", data=data)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve Reciprocal Issued: {str(e)}"
+        )
+
+
+@router.put(
+    "/reciprocal-issued/{reciprocal_id}",
+    response_model=ApiResponse[VehicleRegistrationReciprocalIssued],
+)
+def update_ri(
+    reciprocal_id: int,
+    payload: VehicleRegistrationReciprocalIssuedCreateBody,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        result = update_reciprocal_issued(db, reciprocal_id, payload)
+        data = VehicleRegistrationReciprocalIssued.model_validate(result)
+        return ApiResponse(status="success", message="Reciprocal Issued updated successfully", data=data)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update Reciprocal Issued: {str(e)}"
+        )
+
+
+@router.delete(
+    "/reciprocal-issued/{reciprocal_id}",
+    response_model=ApiResponse,
+)
+def delete_ri(
+    reciprocal_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        result = delete_reciprocal_issued(db, reciprocal_id)
+        return ApiResponse(status="success", message=result["message"])
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete Reciprocal Issued: {str(e)}"
+        )
+
+
+@router.get(
+    "/reciprocal-issued",
+    response_model=ApiResponse[List[VehicleRegistrationReciprocalIssued]],
+)
+def list_all_ri(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        reciprocals = get_all_reciprocal_issued(db, skip=skip, limit=limit)
+        data = [VehicleRegistrationReciprocalIssued.model_validate(r) for r in reciprocals]
+        return ApiResponse(status="success", data=data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve Reciprocal Issued: {str(e)}"
+        )
+
+
+# reciprocal received
+
+@router.post(
+    "/{master_id}/reciprocal-received",
+    response_model=ApiResponse[VehicleRegistrationReciprocalReceived]
+)
+def create_rr(
+    master_id: int,
+    payload: VehicleRegistrationReciprocalReceivedCreateBody,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        result = create_reciprocal_received(db, master_id, payload)
+        data = VehicleRegistrationReciprocalReceived.model_validate(result)
+        return ApiResponse(
+            status="success",
+            message="Reciprocal Received created successfully",
+            data=data
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create Reciprocal Received: {str(e)}"
+        )
+
+
+@router.get(
+    "/{master_id}/reciprocal-received",
+    response_model=ApiResponse[List[VehicleRegistrationReciprocalReceived]]
+)
+def list_rr_for_master(
+    master_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        reciprocals = get_reciprocal_received_by_master(db, master_id)
+        data = [VehicleRegistrationReciprocalReceived.model_validate(r) for r in reciprocals]
+        return ApiResponse(status="success", data=data)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve Reciprocal Received: {str(e)}"
+        )
+
+
+@router.get(
+    "/reciprocal-received/{reciprocal_id}",
+    response_model=ApiResponse[VehicleRegistrationReciprocalReceived]
+)
+def get_rr(
+    reciprocal_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        reciprocal = get_reciprocal_received(db, reciprocal_id)
+        data = VehicleRegistrationReciprocalReceived.model_validate(reciprocal)
+        return ApiResponse(status="success", data=data)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve Reciprocal Received: {str(e)}"
+        )
+
+
+@router.put(
+    "/reciprocal-received/{reciprocal_id}",
+    response_model=ApiResponse[VehicleRegistrationReciprocalReceived]
+)
+def update_rr(
+    reciprocal_id: int,
+    payload: VehicleRegistrationReciprocalReceivedCreateBody,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        result = update_reciprocal_received(db, reciprocal_id, payload)
+        data = VehicleRegistrationReciprocalReceived.model_validate(result)
+        return ApiResponse(status="success", message="Reciprocal Received updated successfully", data=data)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update Reciprocal Received: {str(e)}"
+        )
+
+
+@router.delete(
+    "/reciprocal-received/{reciprocal_id}",
+    response_model=ApiResponse
+)
+def delete_rr(
+    reciprocal_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        result = delete_reciprocal_received(db, reciprocal_id)
+        return ApiResponse(status="success", message=result["message"])
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete Reciprocal Received: {str(e)}"
+        )
+
+
+@router.get(
+    "/reciprocal-received",
+    response_model=ApiResponse[List[VehicleRegistrationReciprocalReceived]]
+)
+def list_all_rr(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        reciprocals = get_all_reciprocal_received(db, skip=skip, limit=limit)
+        data = [VehicleRegistrationReciprocalReceived.model_validate(r) for r in reciprocals]
+        return ApiResponse(status="success", data=data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve Reciprocal Received: {str(e)}"
+        )
+
+
+# trap info uc
+
+@router.post(
+    "/undercover/{undercover_id}/trap-info",
+    response_model=ApiResponse[VehicleRegistrationUnderCoverTrapInfo]
+)
+def create_ti_uc(
+    undercover_id: int,
+    payload: VehicleRegistrationUnderCoverTrapInfoCreateBody,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        result = create_trap_info_undercover(db, undercover_id, payload)
+        data = VehicleRegistrationUnderCoverTrapInfo.model_validate(result)
+        return ApiResponse(
+            status="success",
+            message="Trap Info (UC) created successfully",
+            data=data
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create Trap Info (UC): {str(e)}"
+        )
+
+
+@router.get(
+    "/undercover/{undercover_id}/trap-info",
+    response_model=ApiResponse[List[VehicleRegistrationUnderCoverTrapInfo]]
+)
+def list_ti_uc_for_undercover(
+    undercover_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        trap_infos = get_trap_info_undercover_by_uc(db, undercover_id)
+        data = [VehicleRegistrationUnderCoverTrapInfo.model_validate(t) for t in trap_infos]
+        return ApiResponse(status="success", data=data)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve Trap Info (UC): {str(e)}"
+        )
+
+
+@router.get(
+    "/trap-info-uc/{trap_info_id}",
+    response_model=ApiResponse[VehicleRegistrationUnderCoverTrapInfo]
+)
+def get_ti_uc(
+    trap_info_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        trap_info = get_trap_info_undercover(db, trap_info_id)
+        data = VehicleRegistrationUnderCoverTrapInfo.model_validate(trap_info)
+        return ApiResponse(status="success", data=data)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve Trap Info (UC): {str(e)}"
+        )
+
+
+@router.put(
+    "/trap-info-uc/{trap_info_id}",
+    response_model=ApiResponse[VehicleRegistrationUnderCoverTrapInfo]
+)
+def update_ti_uc(
+    trap_info_id: int,
+    payload: VehicleRegistrationUnderCoverTrapInfoCreateBody,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        result = update_trap_info_undercover(db, trap_info_id, payload)
+        data = VehicleRegistrationUnderCoverTrapInfo.model_validate(result)
+        return ApiResponse(status="success", message="Trap Info (UC) updated successfully", data=data)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update Trap Info (UC): {str(e)}"
+        )
+
+
+@router.delete(
+    "/trap-info-uc/{trap_info_id}",
+    response_model=ApiResponse
+)
+def delete_ti_uc(
+    trap_info_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        result = delete_trap_info_undercover(db, trap_info_id)
+        return ApiResponse(status="success", message=result["message"])
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete Trap Info (UC): {str(e)}"
+        )
+
+
+@router.get(
+    "/trap-info-uc",
+    response_model=ApiResponse[List[VehicleRegistrationUnderCoverTrapInfo]]
+)
+def list_all_ti_uc(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        trap_infos = get_all_trap_info_undercover(db, skip=skip, limit=limit)
+        data = [VehicleRegistrationUnderCoverTrapInfo.model_validate(t) for t in trap_infos]
+        return ApiResponse(status="success", data=data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve Trap Info (UC): {str(e)}"
+        )
+
+
+# trap info fictitious routes
+
+@router.post(
+    "/fictitious/{fictitious_id}/trap-info",
+    response_model=ApiResponse[VehicleRegistrationFictitiousTrapInfo]
+)
+def create_ti_fc(
+    fictitious_id: int,
+    payload: VehicleRegistrationFictitiousTrapInfoCreateBody,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        result = create_trap_info_fictitious(db, fictitious_id, payload)
+        data = VehicleRegistrationFictitiousTrapInfo.model_validate(result)
+        return ApiResponse(
+            status="success",
+            message="Trap Info (FC) created successfully",
+            data=data
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create Trap Info (FC): {str(e)}"
+        )
+
+
+@router.get(
+    "/fictitious/{fictitious_id}/trap-info",
+    response_model=ApiResponse[List[VehicleRegistrationFictitiousTrapInfo]]
+)
+def list_ti_fc_for_fictitious(
+    fictitious_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        trap_infos = get_trap_info_fictitious_by_fc(db, fictitious_id)
+        data = [VehicleRegistrationFictitiousTrapInfo.model_validate(t) for t in trap_infos]
+        return ApiResponse(status="success", data=data)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve Trap Info (FC): {str(e)}"
+        )
+
+
+@router.get(
+    "/trap-info-fc/{trap_info_id}",
+    response_model=ApiResponse[VehicleRegistrationFictitiousTrapInfo]
+)
+def get_ti_fc(
+    trap_info_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        trap_info = get_trap_info_fictitious(db, trap_info_id)
+        data = VehicleRegistrationFictitiousTrapInfo.model_validate(trap_info)
+        return ApiResponse(status="success", data=data)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve Trap Info (FC): {str(e)}"
+        )
+
+
+@router.put(
+    "/trap-info-fc/{trap_info_id}",
+    response_model=ApiResponse[VehicleRegistrationFictitiousTrapInfo]
+)
+def update_ti_fc(
+    trap_info_id: int,
+    payload: VehicleRegistrationFictitiousTrapInfoCreateBody,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        result = update_trap_info_fictitious(db, trap_info_id, payload)
+        data = VehicleRegistrationFictitiousTrapInfo.model_validate(result)
+        return ApiResponse(status="success", message="Trap Info (FC) updated successfully", data=data)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update Trap Info (FC): {str(e)}"
+        )
+
+
+@router.delete(
+    "/trap-info-fc/{trap_info_id}",
+    response_model=ApiResponse
+)
+def delete_ti_fc(
+    trap_info_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        result = delete_trap_info_fictitious(db, trap_info_id)
+        return ApiResponse(status="success", message=result["message"])
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete Trap Info (FC): {str(e)}"
+        )
+
+
+@router.get(
+    "/trap-info-fc",
+    response_model=ApiResponse[List[VehicleRegistrationFictitiousTrapInfo]]
+)
+def list_all_ti_fc(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(get_current_user)
+):
+    try:
+        trap_infos = get_all_trap_info_fictitious(db, skip=skip, limit=limit)
+        data = [VehicleRegistrationFictitiousTrapInfo.model_validate(t) for t in trap_infos]
+        return ApiResponse(status="success", data=data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve Trap Info (FC): {str(e)}"
+        )
