@@ -25,9 +25,15 @@ class VehicleRegistrationContact(BaseModel):
 
 class VehicleRegistrationReciprocalIssued(BaseModel):
     id: int
+    master_record_id: int
     description: Optional[str] = None
     license_plate: Optional[str] = None
-    state: Optional[str] = None
+    issuing_state: Optional[str] = None
+    recipient_state: Optional[str] = None
+    year_of_renewal: Optional[int] = None
+    cancellation_date: Optional[date] = None
+    sticker_number: Optional[str] = None
+    issuing_authority: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -36,20 +42,33 @@ class VehicleRegistrationReciprocalReceived(BaseModel):
     description: Optional[str] = None
     license_plate: Optional[str] = None
     state: Optional[str] = None
+    issuing_state: Optional[str] = None
+    recipient_state: Optional[str] = None
+    year_of_renewal: Optional[int] = None
+    cancellation_date: Optional[date] = None
+    sticker_number: Optional[str] = None
+    issuing_authority: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationUnderCoverTrapInfo(BaseModel):
     id: int
-    date: Optional[datetime] = None
+    request_date: Optional[datetime] = None
     number: Optional[str] = None
+    officer: Optional[str] = None
+    location: Optional[str] = None
+    reason: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationFictitiousTrapInfo(BaseModel):
     id: int
-    date: Optional[datetime] = None
+    request_date: Optional[datetime] = None
     number: Optional[str] = None
+    officer: Optional[str] = None
+    location: Optional[str] = None
+    reason: Optional[str] = None
+    
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -207,31 +226,39 @@ class VehicleRegistrationContactCreateBody(BaseModel):
 class VehicleRegistrationReciprocalIssuedCreateBody(BaseModel):
     description: Optional[str] = None
     license_number: Optional[str] = None
-    state: Optional[str] = None
+    issuing_state: Optional[str] = None
+    recipient_state: Optional[str] = None
     year_of_renewal: Optional[int] = None
     cancellation_date: Optional[date] = None
+    sticker_number: Optional[str] = None
+    issuing_authority: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationReciprocalReceivedCreateBody(BaseModel):
     description: Optional[str] = None
     license_number: Optional[str] = None
-    state: Optional[str] = None
+    issuing_state: Optional[str] = None
+    recipient_state: Optional[str] = None
     year_of_renewal: Optional[int] = None
+    cancellation_date: Optional[date] = None
+    received_date: Optional[date] = None
+    sticker_number: Optional[str] = None
+    issuing_authority: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationUnderCoverTrapInfoCreateBody(BaseModel):
-    date: Optional[date] = None
+    request_date: Optional[date] = None
     number: Optional[str] = None
     officer: Optional[str] = None
     location: Optional[str] = None
-    details: Optional[str] = None
+    reason: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationFictitiousTrapInfoCreateBody(BaseModel):
-    date: Optional[date] = None
+    request_date: Optional[date] = None
     number: Optional[str] = None
     officer: Optional[str] = None
     location: Optional[str] = None

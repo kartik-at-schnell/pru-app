@@ -484,9 +484,12 @@ def create_reciprocal_issued(db: Session, master_id: int, payload: VehicleRegist
         master_record_id=master_id,
         description=payload.description,
         license_plate=payload.license_number,
-        state=payload.state,
+        issuing_state=payload.issuing_state,
+        recipient_state=payload.recipient_state,
         year_of_renewal=payload.year_of_renewal,
-        cancellation_date=payload.cancellation_date
+        cancellation_date=payload.cancellation_date,
+        sticker_number=payload.sticker_number,
+        issuing_authority=payload.issuing_authority
     )
     
     db.add(reciprocal)
@@ -546,8 +549,13 @@ def create_reciprocal_received(db: Session, master_id: int, payload: VehicleRegi
         master_record_id=master_id,
         description=payload.description,
         license_plate=payload.license_number,
-        state=payload.state,
-        year_of_renewal=payload.year_of_renewal
+        issuing_state=payload.issuing_state,
+        recipient_state=payload.recipient_state,
+        year_of_renewal=payload.year_of_renewal,
+        cancellation_date=payload.cancellation_date,
+        received_date=payload.received_date,
+        sticker_number=payload.sticker_number,
+        issuing_authority=payload.issuing_authority
     )
     
     db.add(reciprocal)
@@ -610,7 +618,7 @@ def create_trap_info_undercover(db: Session, undercover_id: int, payload: Vehicl
     
     trap_info = VehicleRegistrationUnderCoverTrapInfo(
         undercover_id=undercover_id,
-        date=payload.date,
+        request_date=payload.request_date,
         number=payload.number,
         officer=payload.officer,
         location=payload.location,
@@ -684,7 +692,7 @@ def create_trap_info_fictitious(db: Session, fictitious_id: int, payload: Vehicl
     
     trap_info = VehicleRegistrationFictitiousTrapInfo(
         fictitious_id=fictitious_id,
-        date=payload.date,
+        request_date=payload.request_date,
         number=payload.number,
         officer=payload.officer,
         location=payload.location,

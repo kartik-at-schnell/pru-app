@@ -195,14 +195,14 @@ class VehicleRegistrationReciprocalIssued(BaseModel):
  
     description = Column(Text)
     license_plate = Column(String(20))
-    state = Column(String(50))
+    # state = Column(String(50))
     year_of_renewal = Column(Integer)
     cancellation_date = Column(Date)
     sticker_number = Column(String(50))
  
     issuing_authority = Column(String(100))
     issuing_state = Column(String(100))
-    recipent_state = Column(String(100))
+    recipient_state = Column(String(100))
  
     master_record = relationship("VehicleRegistrationMaster", back_populates="reciprocal_issued")
 
@@ -226,7 +226,7 @@ class VehicleRegistrationReciprocalReceived(BaseModel):
  
     issuing_authority = Column(String(100))
     issuing_state = Column(String(100))
-    recipent_state = Column(String(100))
+    recipient_state = Column(String(100))
  
     master_record = relationship("VehicleRegistrationMaster", back_populates="reciprocal_received")
 
@@ -237,7 +237,7 @@ class VehicleRegistrationFictitiousTrapInfo(BaseModel):
     id = Column(Integer, primary_key=True, index=True)
     fictitious_id = Column(Integer, ForeignKey("vehicle_registration_fictitious.id"), nullable=False)
     
-    date = Column(Date)
+    request_date = Column(Date)
     number = Column(String(100))
     officer = Column(String(100))
     location = Column(String(100))
@@ -256,7 +256,7 @@ class VehicleRegistrationUnderCoverTrapInfo(BaseModel):
     number = Column(String(100))
     officer = Column(String(100))
     location = Column(String(100))
-    details = Column(String(500))
+    reason = Column(String(500))
  
     verified_by = Column(String(100))
     verification_date = Column(Date)

@@ -495,7 +495,7 @@ def delete_ri(
             detail=f"Failed to delete Reciprocal Issued: {str(e)}"
         )
 
-
+# get all
 @router.get(
     "/reciprocal-issued",
     response_model=ApiResponse[List[VehicleRegistrationReciprocalIssued]],
@@ -633,7 +633,7 @@ def delete_rr(
             detail=f"Failed to delete Reciprocal Received: {str(e)}"
         )
 
-
+# get all
 @router.get(
     "/reciprocal-received",
     response_model=ApiResponse[List[VehicleRegistrationReciprocalReceived]]
@@ -771,7 +771,7 @@ def delete_ti_uc(
             detail=f"Failed to delete Trap Info (UC): {str(e)}"
         )
 
-
+# get all
 @router.get(
     "/trap-info-uc",
     response_model=ApiResponse[List[VehicleRegistrationUnderCoverTrapInfo]]
@@ -909,7 +909,7 @@ def delete_ti_fc(
             detail=f"Failed to delete Trap Info (FC): {str(e)}"
         )
 
-
+# get all
 @router.get(
     "/trap-info-fc",
     response_model=ApiResponse[List[VehicleRegistrationFictitiousTrapInfo]]
