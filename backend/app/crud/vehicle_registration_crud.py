@@ -518,6 +518,16 @@ def get_reciprocal_issued_by_master(db: Session, master_id: int):
     ).all()
     return reciprocals
 
+def get_reciprocal_issued_by_id(db: Session, reciprocal_id: int):
+    reciprocal = db.query(VehicleRegistrationReciprocalIssued).filter(
+        VehicleRegistrationReciprocalIssued.id == reciprocal_id
+    ).first()
+    
+    if not reciprocal:
+        raise HTTPException(status_code=404, detail="Reciprocal Issued record not found")
+    
+    return reciprocal
+
 
 def update_reciprocal_issued(db: Session, reciprocal_id: int, payload: VehicleRegistrationReciprocalIssuedCreateBody):
     reciprocal = get_reciprocal_issued(db, reciprocal_id)

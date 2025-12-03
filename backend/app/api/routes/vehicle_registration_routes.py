@@ -26,6 +26,7 @@ from app.crud.vehicle_registration_crud import (
     get_contact,
     get_contacts_by_master,
     get_reciprocal_issued,
+    get_reciprocal_issued_by_id,
     get_reciprocal_issued_by_master,
     get_reciprocal_received,
     get_reciprocal_received_by_master,
@@ -439,7 +440,7 @@ def get_ri(
     current_user: user_models.User = Depends(get_current_user)
 ):
     try:
-        reciprocal = get_reciprocal_issued(db, reciprocal_id)
+        reciprocal = get_reciprocal_issued_by_id(db, reciprocal_id)
         data = VehicleRegistrationReciprocalIssued.model_validate(reciprocal)
         return ApiResponse(status="success", data=data)
     except HTTPException as e:
