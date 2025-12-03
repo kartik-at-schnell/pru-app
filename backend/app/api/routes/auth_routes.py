@@ -7,7 +7,8 @@ from app.database import get_db
 from app.crud import user_crud
 from app.security import (
     create_access_token,
-    ACCESS_TOKEN_EXPIRE_MINUTES
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    get_current_user
 )
 # from app.utils.hash_password import verify_password, hash_password
 from app.schemas import user_schema
@@ -49,3 +50,24 @@ def register_new_user(
         )
     new_user = user_crud.create_user(db=db, user=user_in)
     return new_user
+
+@router.get("/me", response_model=user_schema.UserWithPermissions)
+def get_current_user_profile(current_user = Depends(get_current_user)):
+    """
+    Fetches the currently logged-in user's profile, 
+    including a flattened list of all their permissions.
+    """
+    permissions = set()
+    for role in current_user.roles:
+        # If Admin, we might want to fetch all permissions if not explicitly assigned.
+        # But assuming seed data assigns all perms to Admin, this loop works.
+        for perm in role.permissions:
+            permissions.add(perm.slug)
+            
+    # Create response object
+    # Pydantic's from_attributes=True allows us to pass the SQLAlchemy model
+    # but we need to manually populate the extra 'permissions' field
+    user_response = user_schema.UserWithPermissions.model_validate(current_user)
+    user_response.permissions = list(permissions)
+    
+    return user_response

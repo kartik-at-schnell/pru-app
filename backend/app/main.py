@@ -14,6 +14,8 @@ from app.api.routes import document_routes
 from app.api.routes import driving_license_routes
 from app.security import get_current_user
 from app.api.routes import record_supression_routes
+from app.api.routes import admin_routes
+from app.models import user_models
 
 
 app = FastAPI()
@@ -53,12 +55,14 @@ router.include_router(record_supression_routes.router)
 app.include_router(router)
 
 app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
+app.include_router(admin_routes.router)
 
 @app.get("/")
 async def root():
     return {"message": "Welcome to the PRU Automation API"}
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 
 @app.get("/test")
 async def test(db: Session = Depends(get_db)):

@@ -25,6 +25,14 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     roles = relationship("Role", secondary=user_roles_table, back_populates="users")
+    azure_ad_object_id = Column(String(255), nullable=True)
+
+role_permissions_table = Table(
+    'role_permissions',
+    Base.metadata,
+    Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
+    Column('permission_id', Integer, ForeignKey('permissions.id'), primary_key=True)
+)
 
 # role table
 class Role(Base):
@@ -32,8 +40,17 @@ class Role(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50), unique=True, index=True, nullable=False)
-    description = Column(String(255), nullable=True)
 
     # relationship to users
     users = relationship("User", secondary=user_roles_table, back_populates="roles")
+    # relationship to permissions
+    permissions = relationship("Permission", secondary=role_permissions_table, back_populates="roles")
+
+class Permission(Base):
+    __tablename__ = "permissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String(100), unique=True, index=True, nullable=False)
+
+    roles = relationship("Role", secondary=role_permissions_table, back_populates="permissions")
 
