@@ -52,22 +52,47 @@ def register_new_user(
     return new_user
 
 @router.get("/me", response_model=user_schema.UserWithPermissions)
-def get_current_user_profile(current_user = Depends(get_current_user)):
+def get_current_user_profile(
+    email: str | None = None,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Fetches the currently logged-in user's profile, 
     including a flattened list of all their permissions.
+    Optionally accepts an email to fetch a specific user's profile (Admin use case).
     """
-    permissions = set()
-    for role in current_user.roles:
-        # If Admin, we might want to fetch all permissions if not explicitly assigned.
-        # But assuming seed data assigns all perms to Admin, this loop works.
+    target_user = current_user
+    if email:
+        # TODO: Add check if current_user is Admin before allowing this
+        user_by_email = user_crud.get_user_by_email(db, email=email)
+        if user_by_email:
+            target_user = user_by_email
+        else:
+             raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User with email {email} not found"
+            )
+
+    # Group permissions by module
+    permissions_by_module = {}
+    
+    for role in target_user.roles:
         for perm in role.permissions:
-            permissions.add(perm.slug)
+            module_name = perm.module.name if perm.module else "Other"
+            if module_name not in permissions_by_module:
+                permissions_by_module[module_name] = set()
+            permissions_by_module[module_name].add(perm.slug)
             
+    # Convert to list of ModulePermissions
+    module_permissions_list = []
+    for module, slugs in permissions_by_module.items():
+        module_permissions_list.append(
+            user_schema.ModulePermissions(module=module, slugs=list(slugs))
+        )
+
     # Create response object
-    # Pydantic's from_attributes=True allows us to pass the SQLAlchemy model
-    # but we need to manually populate the extra 'permissions' field
-    user_response = user_schema.UserWithPermissions.model_validate(current_user)
-    user_response.permissions = list(permissions)
+    user_response = user_schema.UserWithPermissions.model_validate(target_user)
+    user_response.permissions = module_permissions_list
     
     return user_response

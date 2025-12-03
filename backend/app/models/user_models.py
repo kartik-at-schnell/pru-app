@@ -46,11 +46,23 @@ class Role(Base):
     # relationship to permissions
     permissions = relationship("Permission", secondary=role_permissions_table, back_populates="roles")
 
+
+class Module(Base):
+    __tablename__ = "modules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, index=True, nullable=False)
+
+    permissions = relationship("Permission", back_populates="module")
+
+
 class Permission(Base):
     __tablename__ = "permissions"
 
     id = Column(Integer, primary_key=True, index=True)
     slug = Column(String(100), unique=True, index=True, nullable=False)
+    module_id = Column(Integer, ForeignKey("modules.id"), nullable=True)
 
+    module = relationship("Module", back_populates="permissions")
     roles = relationship("Role", secondary=role_permissions_table, back_populates="permissions")
 

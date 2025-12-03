@@ -1,14 +1,28 @@
 from typing import List, Optional
 from pydantic import BaseModel
 
+class ModuleBase(BaseModel):
+    name: str
+
+class ModuleCreate(ModuleBase):
+    pass
+
+class Module(ModuleBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
 class PermissionBase(BaseModel):
     slug: str
+    module_id: Optional[int] = None
 
 class PermissionCreate(PermissionBase):
     pass
 
 class Permission(PermissionBase):
     id: int
+    module: Optional[Module] = None
 
     class Config:
         from_attributes = True
