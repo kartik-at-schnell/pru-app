@@ -26,6 +26,7 @@ from app.crud.vehicle_registration_crud import (
     get_contact,
     get_contacts_by_master,
     get_reciprocal_issued,
+    get_reciprocal_issued_by_id,
     get_reciprocal_issued_by_master,
     get_reciprocal_received,
     get_reciprocal_received_by_master,
@@ -382,17 +383,16 @@ def list_all_contacts(
 
 # reciprocal issued uc
 @router.post(
-    "/{master_id}/reciprocal-issued",
+    "/reciprocal-issued",
     response_model=ApiResponse[VehicleRegistrationReciprocalIssued],
 )
 def create_ri(
-    master_id: int,
     payload: VehicleRegistrationReciprocalIssuedCreateBody,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(get_current_user)
 ):
     try:
-        result = create_reciprocal_issued(db, master_id, payload)
+        result = create_reciprocal_issued(db, payload)
         data = VehicleRegistrationReciprocalIssued.model_validate(result)
         return ApiResponse(
             status="success",
@@ -440,7 +440,7 @@ def get_ri(
     current_user: user_models.User = Depends(get_current_user)
 ):
     try:
-        reciprocal = get_reciprocal_issued(db, reciprocal_id)
+        reciprocal = get_reciprocal_issued_by_id(db, reciprocal_id)
         data = VehicleRegistrationReciprocalIssued.model_validate(reciprocal)
         return ApiResponse(status="success", data=data)
     except HTTPException as e:
@@ -495,7 +495,7 @@ def delete_ri(
             detail=f"Failed to delete Reciprocal Issued: {str(e)}"
         )
 
-
+# get all
 @router.get(
     "/reciprocal-issued",
     response_model=ApiResponse[List[VehicleRegistrationReciprocalIssued]],
@@ -520,17 +520,16 @@ def list_all_ri(
 # reciprocal received
 
 @router.post(
-    "/{master_id}/reciprocal-received",
+    "/reciprocal-received",
     response_model=ApiResponse[VehicleRegistrationReciprocalReceived]
 )
 def create_rr(
-    master_id: int,
     payload: VehicleRegistrationReciprocalReceivedCreateBody,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(get_current_user)
 ):
     try:
-        result = create_reciprocal_received(db, master_id, payload)
+        result = create_reciprocal_received(db, payload)
         data = VehicleRegistrationReciprocalReceived.model_validate(result)
         return ApiResponse(
             status="success",
@@ -633,7 +632,7 @@ def delete_rr(
             detail=f"Failed to delete Reciprocal Received: {str(e)}"
         )
 
-
+# get all
 @router.get(
     "/reciprocal-received",
     response_model=ApiResponse[List[VehicleRegistrationReciprocalReceived]]
@@ -771,7 +770,7 @@ def delete_ti_uc(
             detail=f"Failed to delete Trap Info (UC): {str(e)}"
         )
 
-
+# get all
 @router.get(
     "/trap-info-uc",
     response_model=ApiResponse[List[VehicleRegistrationUnderCoverTrapInfo]]
@@ -909,7 +908,7 @@ def delete_ti_fc(
             detail=f"Failed to delete Trap Info (FC): {str(e)}"
         )
 
-
+# get all
 @router.get(
     "/trap-info-fc",
     response_model=ApiResponse[List[VehicleRegistrationFictitiousTrapInfo]]

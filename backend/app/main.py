@@ -20,30 +20,33 @@ from app.models import user_models
 
 app = FastAPI()
 
-#adding cors for FE connection
+# adding cors for FE connection
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "https://prudev.dmv.ca.gov",
+        "https://pru.dmv.ca.gov",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-router = APIRouter(
-    prefix="/api",
-    dependencies=[Depends(get_current_user)]
-)
+router = APIRouter(prefix="/api", dependencies=[Depends(get_current_user)])
+
 
 @app.get("/")
 async def root():
     return {"message": "PRU API Live"}
 
+
 @app.get("/health")
 async def health():
-    return {
-        "status": 200,
-        "message": "Server Running"
-    }
+    return {"status": 200, "message": "Server Running"}
+
 
 router.include_router(document_routes.router)
 router.include_router(vehicle_registration_routes.router)
@@ -57,9 +60,11 @@ app.include_router(router)
 app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
 app.include_router(admin_routes.router)
 
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to the PRU Automation API"}
+
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -68,22 +73,33 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 async def test(db: Session = Depends(get_db)):
     try:
         total_records = db.query(VehicleRegistrationMaster).count()
-        pending = db.query(VehicleRegistrationMaster).filter(VehicleRegistrationMaster.approval_status == "pending").count()
-        approved = db.query(VehicleRegistrationMaster).filter(VehicleRegistrationMaster.approval_status == "approved").count()
-        rejected = db.query(VehicleRegistrationMaster).filter(VehicleRegistrationMaster.approval_status == "rejected").count()
+        pending = (
+            db.query(VehicleRegistrationMaster)
+            .filter(VehicleRegistrationMaster.approval_status == "pending")
+            .count()
+        )
+        approved = (
+            db.query(VehicleRegistrationMaster)
+            .filter(VehicleRegistrationMaster.approval_status == "approved")
+            .count()
+        )
+        rejected = (
+            db.query(VehicleRegistrationMaster)
+            .filter(VehicleRegistrationMaster.approval_status == "rejected")
+            .count()
+        )
 
         sample_records = db.query(VehicleRegistrationMaster).limit(5).all()
 
-        return{
+        return {
             "db_status": "connected",
             "total_records": total_records,
             "status_breakdown": {
                 "pending": pending,
                 "approved": approved,
-                "rejected": rejected
+                "rejected": rejected,
             },
-            "sample_records":[
-                
+            "sample_records": [
                 {
                     "id": record.id,
                     "license_number": record.license_number,
@@ -91,14 +107,11 @@ async def test(db: Session = Depends(get_db)):
                     "make": record.make,
                     "model": record.model,
                     "approval_status": record.approval_status,
-                    "created_at": record.created_at.isoformat()
+                    "created_at": record.created_at.isoformat(),
                 }
                 for record in sample_records
-            ]
+            ],
         }
-    
+
     except Exception as e:
-        return {
-            "db_status": "error", "error": str(e)
-        }
-        
+        return {"db_status": "error", "error": str(e)}

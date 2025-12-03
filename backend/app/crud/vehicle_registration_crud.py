@@ -477,16 +477,24 @@ def get_all_contacts(db: Session, skip: int = 0, limit: int = 100):
     return contacts
 
 # create reciprocal issued
-def create_reciprocal_issued(db: Session, master_id: int, payload: VehicleRegistrationReciprocalIssuedCreateBody):
-    get_master_by_id(db, master_id)
+def create_reciprocal_issued(db: Session, payload: VehicleRegistrationReciprocalIssuedCreateBody):
+
+    master = None
+    if payload.master_record_id is not None:
+        master = get_master_by_id(db, payload.master_record_id)
+        if not master:
+            raise HTTPException(status_code=404, detail=f"Master record {payload.master_record_id} not found")
     
     reciprocal = VehicleRegistrationReciprocalIssued(
-        master_record_id=master_id,
+        master_record_id=payload.master_record_id,
         description=payload.description,
         license_plate=payload.license_number,
-        state=payload.state,
+        issuing_state=payload.issuing_state,
+        recipient_state=payload.recipient_state,
         year_of_renewal=payload.year_of_renewal,
-        cancellation_date=payload.cancellation_date
+        cancellation_date=payload.cancellation_date,
+        sticker_number=payload.sticker_number,
+        issuing_authority=payload.issuing_authority
     )
     
     db.add(reciprocal)
@@ -495,14 +503,11 @@ def create_reciprocal_issued(db: Session, master_id: int, payload: VehicleRegist
     return reciprocal
 
 
-def get_reciprocal_issued(db: Session, reciprocal_id: int):
-    reciprocal = db.query(VehicleRegistrationReciprocalIssued).filter(
-        VehicleRegistrationReciprocalIssued.id == reciprocal_id
-    ).first()
-    
-    if not reciprocal:
-        raise HTTPException(status_code=404, detail="Reciprocal Issued record not found")
-    return reciprocal
+def get_reciprocal_issued(db: Session, master_id: Optional[int] = None, skip: int = 0, limit: int = 50):
+    query = db.query(VehicleRegistrationReciprocalIssued)
+    if master_id is not None:
+        query = query.filter(VehicleRegistrationReciprocalIssued.master_record_id == master_id)
+    return query.offset(skip).limit(limit).all()
 
 
 def get_reciprocal_issued_by_master(db: Session, master_id: int):
@@ -512,6 +517,16 @@ def get_reciprocal_issued_by_master(db: Session, master_id: int):
         VehicleRegistrationReciprocalIssued.master_record_id == master_id
     ).all()
     return reciprocals
+
+def get_reciprocal_issued_by_id(db: Session, reciprocal_id: int):
+    reciprocal = db.query(VehicleRegistrationReciprocalIssued).filter(
+        VehicleRegistrationReciprocalIssued.id == reciprocal_id
+    ).first()
+    
+    if not reciprocal:
+        raise HTTPException(status_code=404, detail="Reciprocal Issued record not found")
+    
+    return reciprocal
 
 
 def update_reciprocal_issued(db: Session, reciprocal_id: int, payload: VehicleRegistrationReciprocalIssuedCreateBody):
@@ -539,15 +554,24 @@ def get_all_reciprocal_issued(db: Session, skip: int = 0, limit: int = 100):
 
 
 # reciprocal received
-def create_reciprocal_received(db: Session, master_id: int, payload: VehicleRegistrationReciprocalReceivedCreateBody):
-    get_master_by_id(db, master_id)
+def create_reciprocal_received(db: Session, payload: VehicleRegistrationReciprocalReceivedCreateBody):
+    master = None
+    if payload.master_record_id is not None:
+        master = get_master_by_id(db, payload.master_record_id)
+        if not master:
+            raise HTTPException(status_code=404, detail=f"Master record {payload.master_record_id} not found")
     
     reciprocal = VehicleRegistrationReciprocalReceived(
-        master_record_id=master_id,
+        master_record_id=payload.master_record_id,
         description=payload.description,
         license_plate=payload.license_number,
-        state=payload.state,
-        year_of_renewal=payload.year_of_renewal
+        issuing_state=payload.issuing_state,
+        recipient_state=payload.recipient_state,
+        year_of_renewal=payload.year_of_renewal,
+        cancellation_date=payload.cancellation_date,
+        recieved_date=payload.recieved_date,
+        sticker_number=payload.sticker_number,
+        issuing_authority=payload.issuing_authority
     )
     
     db.add(reciprocal)
@@ -610,13 +634,13 @@ def create_trap_info_undercover(db: Session, undercover_id: int, payload: Vehicl
     
     trap_info = VehicleRegistrationUnderCoverTrapInfo(
         undercover_id=undercover_id,
-        date=payload.date,
+        request_date=payload.request_date,
         number=payload.number,
         officer=payload.officer,
         location=payload.location,
-        details=payload.details,
-        verified_by=payload.verified_by,
-        verification_date=payload.verification_date
+        reason=payload.reason,
+        # verified_by=payload.verified_by,
+        # verification_date=payload.verification_date
     )
     
     db.add(trap_info)
@@ -684,7 +708,7 @@ def create_trap_info_fictitious(db: Session, fictitious_id: int, payload: Vehicl
     
     trap_info = VehicleRegistrationFictitiousTrapInfo(
         fictitious_id=fictitious_id,
-        date=payload.date,
+        request_date=payload.request_date,
         number=payload.number,
         officer=payload.officer,
         location=payload.location,
