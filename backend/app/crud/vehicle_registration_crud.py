@@ -16,8 +16,13 @@ from app.schemas.vehicle_registration_schema import(
     FictitiousCreateRequest,
     MasterCreateRequest,
     UnderCoverCreateRequest,
+    VehicleRegistrationContactCreateBody,
+    VehicleRegistrationFictitiousTrapInfoCreateBody,
     VehicleRegistrationMasterCreate,
-    VehicleRegistrationMasterBase
+    VehicleRegistrationMasterBase,
+    VehicleRegistrationReciprocalIssuedCreateBody,
+    VehicleRegistrationReciprocalReceivedCreateBody,
+    VehicleRegistrationUnderCoverTrapInfoCreateBody
 )
 from ..models.base import BaseModel
 
@@ -38,7 +43,23 @@ def create_master_record(db, payload: MasterCreateRequest):
         body_type=payload.body_type,
         type_license=payload.type_license,
         type_vehicle=payload.type_vehicle,
-        active_status=payload.active_status
+        active_status=payload.active_status,
+        expiration_date=payload.expiration_date,
+        date_issued = payload.date_issued,
+        date_received = payload.date_received,
+        date_fee_received = payload.date_fee_received,
+        amount_paid = payload.amount_paid,
+        amount_due = payload.amount_due,
+        amount_received = payload.amount_received,
+        use_tax = payload.use_tax,
+        sticker_issued = payload.sticker_issued,
+        sticker_numbers = payload.sticker_numbers,
+        cert_type = payload.cert_type,            
+        mp =payload.mp,               
+        mo =payload.mo,                    
+        axl =payload.axl,                  
+        wc =payload.wc,                    
+        cc_alco = payload.cc_alco,
     )
     db.add(master)
     db.commit()
@@ -219,8 +240,8 @@ def get_vehicle_master_details(db: Session, master_id: str):
         .filter(VehicleRegistrationMaster.id == master_id)
         .options(
             joinedload(VehicleRegistrationMaster.contacts),
-            joinedload(VehicleRegistrationMaster.reciprocal_issued),
-            joinedload(VehicleRegistrationMaster.reciprocal_received),
+            # joinedload(VehicleRegistrationMaster.reciprocal_issued),  # these two are removed for now since relations has been removed temporarily
+            # joinedload(VehicleRegistrationMaster.reciprocal_received),
             joinedload(VehicleRegistrationMaster.undercover_records)
             .subqueryload(VehicleRegistrationUnderCover.trap_info),
             joinedload(VehicleRegistrationMaster.fictitious_records)
@@ -392,3 +413,357 @@ def bulk_delete(db: Session, record_ids: List[int]):
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Bulk delete failed: {str(e)}")
 
+
+def create_contact(db: Session, master_id: int, payload: VehicleRegistrationContactCreateBody):
+
+    master = get_master_by_id(db, master_id)
+    
+    contact = VehicleRegistrationContact(
+        master_record_id=master_id,
+        contact_name=payload.contact_name,
+        department=payload.department,
+        email=payload.email,
+        phone_number=payload.phone_number,
+        address=payload.address,
+        alt_contact_1=payload.alt_contact_1,
+        alt_contact_2=payload.alt_contact_2,
+        alt_contact_3=payload.alt_contact_3,
+        alt_contact_4=payload.alt_contact_4
+    )
+
+    db.add(contact)
+    db.commit()
+    db.refresh(contact)
+    
+    return contact
+
+
+def get_contact(db: Session, contact_id: int):
+
+    contact = db.query(VehicleRegistrationContact).filter(
+        VehicleRegistrationContact.id == contact_id
+    ).first()
+    
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    return contact
+
+
+def get_contacts_by_master(db: Session, master_id: int):
+
+    get_master_by_id(db, master_id)
+    
+    contacts = db.query(VehicleRegistrationContact).filter(
+        VehicleRegistrationContact.master_record_id == master_id
+    ).all()
+    
+    return contacts
+
+
+def update_contact(db: Session, contact_id: int, payload: VehicleRegistrationContactCreateBody):    
+  
+    contact = get_contact(db, contact_id)
+    
+    db.delete(contact)
+    db.commit()
+
+    return {"message": f"Contact {contact_id} deleted successfully"}
+
+
+def get_all_contacts(db: Session, skip: int = 0, limit: int = 100):
+
+    contacts = db.query(VehicleRegistrationContact).offset(skip).limit(limit).all()
+    return contacts
+
+# create reciprocal issued
+def create_reciprocal_issued(db: Session, payload: VehicleRegistrationReciprocalIssuedCreateBody):
+
+    master = None
+    if payload.master_record_id is not None:
+        master = get_master_by_id(db, payload.master_record_id)
+        if not master:
+            raise HTTPException(status_code=404, detail=f"Master record {payload.master_record_id} not found")
+    
+    reciprocal = VehicleRegistrationReciprocalIssued(
+        master_record_id=payload.master_record_id,
+        description=payload.description,
+        license_plate=payload.license_number,
+        issuing_state=payload.issuing_state,
+        recipient_state=payload.recipient_state,
+        year_of_renewal=payload.year_of_renewal,
+        cancellation_date=payload.cancellation_date,
+        sticker_number=payload.sticker_number,
+        issuing_authority=payload.issuing_authority
+    )
+    
+    db.add(reciprocal)
+    db.commit()
+    db.refresh(reciprocal)
+    return reciprocal
+
+
+def get_reciprocal_issued(db: Session, master_id: Optional[int] = None, skip: int = 0, limit: int = 50):
+    query = db.query(VehicleRegistrationReciprocalIssued)
+    if master_id is not None:
+        query = query.filter(VehicleRegistrationReciprocalIssued.master_record_id == master_id)
+    return query.offset(skip).limit(limit).all()
+
+
+def get_reciprocal_issued_by_master(db: Session, master_id: int):
+    get_master_by_id(db, master_id)
+    
+    reciprocals = db.query(VehicleRegistrationReciprocalIssued).filter(
+        VehicleRegistrationReciprocalIssued.master_record_id == master_id
+    ).all()
+    return reciprocals
+
+def get_reciprocal_issued_by_id(db: Session, reciprocal_id: int):
+    reciprocal = db.query(VehicleRegistrationReciprocalIssued).filter(
+        VehicleRegistrationReciprocalIssued.id == reciprocal_id
+    ).first()
+    
+    if not reciprocal:
+        raise HTTPException(status_code=404, detail="Reciprocal Issued record not found")
+    
+    return reciprocal
+
+
+def update_reciprocal_issued(db: Session, reciprocal_id: int, payload: VehicleRegistrationReciprocalIssuedCreateBody):
+    reciprocal = get_reciprocal_issued(db, reciprocal_id)
+    
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        if hasattr(reciprocal, key):
+            setattr(reciprocal, key, value)
+    
+    db.commit()
+    db.refresh(reciprocal)
+    return reciprocal
+
+
+def delete_reciprocal_issued(db: Session, reciprocal_id: int):
+    reciprocal = get_reciprocal_issued(db, reciprocal_id)
+    db.delete(reciprocal)
+    db.commit()
+    return {"message": f"Reciprocal Issued {reciprocal_id} deleted successfully"}
+
+
+def get_all_reciprocal_issued(db: Session, skip: int = 0, limit: int = 100):
+    reciprocals = db.query(VehicleRegistrationReciprocalIssued).offset(skip).limit(limit).all()
+    return reciprocals
+
+
+# reciprocal received
+def create_reciprocal_received(db: Session, payload: VehicleRegistrationReciprocalReceivedCreateBody):
+    master = None
+    if payload.master_record_id is not None:
+        master = get_master_by_id(db, payload.master_record_id)
+        if not master:
+            raise HTTPException(status_code=404, detail=f"Master record {payload.master_record_id} not found")
+    
+    reciprocal = VehicleRegistrationReciprocalReceived(
+        master_record_id=payload.master_record_id,
+        description=payload.description,
+        license_plate=payload.license_number,
+        issuing_state=payload.issuing_state,
+        recipient_state=payload.recipient_state,
+        year_of_renewal=payload.year_of_renewal,
+        cancellation_date=payload.cancellation_date,
+        recieved_date=payload.recieved_date,
+        sticker_number=payload.sticker_number,
+        issuing_authority=payload.issuing_authority
+    )
+    
+    db.add(reciprocal)
+    db.commit()
+    db.refresh(reciprocal)
+    return reciprocal
+
+
+def get_reciprocal_received(db: Session, reciprocal_id: int):
+    reciprocal = db.query(VehicleRegistrationReciprocalReceived).filter(
+        VehicleRegistrationReciprocalReceived.id == reciprocal_id
+    ).first()
+    
+    if not reciprocal:
+        raise HTTPException(status_code=404, detail="Reciprocal Received record not found")
+    return reciprocal
+
+
+def get_reciprocal_received_by_master(db: Session, master_id: int):
+    get_master_by_id(db, master_id)
+    
+    reciprocals = db.query(VehicleRegistrationReciprocalReceived).filter(
+        VehicleRegistrationReciprocalReceived.master_record_id == master_id
+    ).all()
+    return reciprocals
+
+
+def update_reciprocal_received(db: Session, reciprocal_id: int, payload: VehicleRegistrationReciprocalReceivedCreateBody):
+    reciprocal = get_reciprocal_received(db, reciprocal_id)
+    
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        if hasattr(reciprocal, key):
+            setattr(reciprocal, key, value)
+    
+    db.commit()
+    db.refresh(reciprocal)
+    return reciprocal
+
+
+def delete_reciprocal_received(db: Session, reciprocal_id: int):
+    reciprocal = get_reciprocal_received(db, reciprocal_id)
+    db.delete(reciprocal)
+    db.commit()
+    return {"message": f"Reciprocal Received {reciprocal_id} deleted successfully"}
+
+
+def get_all_reciprocal_received(db: Session, skip: int = 0, limit: int = 100):
+    reciprocals = db.query(VehicleRegistrationReciprocalReceived).offset(skip).limit(limit).all()
+    return reciprocals
+
+
+# trap info undercover
+def create_trap_info_undercover(db: Session, undercover_id: int, payload: VehicleRegistrationUnderCoverTrapInfoCreateBody):
+    uc = db.query(VehicleRegistrationUnderCover).filter(
+        VehicleRegistrationUnderCover.id == undercover_id
+    ).first()
+    
+    if not uc:
+        raise HTTPException(status_code=404, detail="Undercover record not found")
+    
+    trap_info = VehicleRegistrationUnderCoverTrapInfo(
+        undercover_id=undercover_id,
+        request_date=payload.request_date,
+        number=payload.number,
+        officer=payload.officer,
+        location=payload.location,
+        reason=payload.reason,
+        # verified_by=payload.verified_by,
+        # verification_date=payload.verification_date
+    )
+    
+    db.add(trap_info)
+    db.commit()
+    db.refresh(trap_info)
+    return trap_info
+
+
+def get_trap_info_undercover(db: Session, trap_info_id: int):
+    trap_info = db.query(VehicleRegistrationUnderCoverTrapInfo).filter(
+        VehicleRegistrationUnderCoverTrapInfo.id == trap_info_id
+    ).first()
+    
+    if not trap_info:
+        raise HTTPException(status_code=404, detail="Trap Info (UC) not found")
+    return trap_info
+
+
+def get_trap_info_undercover_by_uc(db: Session, undercover_id: int):
+    uc = db.query(VehicleRegistrationUnderCover).filter(
+        VehicleRegistrationUnderCover.id == undercover_id
+    ).first()
+    
+    if not uc:
+        raise HTTPException(status_code=404, detail="Undercover record not found")
+    
+    trap_infos = db.query(VehicleRegistrationUnderCoverTrapInfo).filter(
+        VehicleRegistrationUnderCoverTrapInfo.undercover_id == undercover_id
+    ).all()
+    return trap_infos
+
+
+def update_trap_info_undercover(db: Session, trap_info_id: int, payload: VehicleRegistrationUnderCoverTrapInfoCreateBody):
+    trap_info = get_trap_info_undercover(db, trap_info_id)
+    
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        if hasattr(trap_info, key):
+            setattr(trap_info, key, value)
+    
+    db.commit()
+    db.refresh(trap_info)
+    return trap_info
+
+
+def delete_trap_info_undercover(db: Session, trap_info_id: int):
+    trap_info = get_trap_info_undercover(db, trap_info_id)
+    db.delete(trap_info)
+    db.commit()
+    return {"message": f"Trap Info (UC) {trap_info_id} deleted successfully"}
+
+
+def get_all_trap_info_undercover(db: Session, skip: int = 0, limit: int = 100):
+    trap_infos = db.query(VehicleRegistrationUnderCoverTrapInfo).offset(skip).limit(limit).all()
+    return trap_infos
+
+
+# trap info fictitious
+def create_trap_info_fictitious(db: Session, fictitious_id: int, payload: VehicleRegistrationFictitiousTrapInfoCreateBody):
+    fc = db.query(VehicleRegistrationFictitious).filter(
+        VehicleRegistrationFictitious.id == fictitious_id
+    ).first()
+    
+    if not fc:
+        raise HTTPException(status_code=404, detail="Fictitious record not found")
+    
+    trap_info = VehicleRegistrationFictitiousTrapInfo(
+        fictitious_id=fictitious_id,
+        request_date=payload.request_date,
+        number=payload.number,
+        officer=payload.officer,
+        location=payload.location,
+        reason=payload.reason
+    )
+    
+    db.add(trap_info)
+    db.commit()
+    db.refresh(trap_info)
+    return trap_info
+
+
+def get_trap_info_fictitious(db: Session, trap_info_id: int):
+    trap_info = db.query(VehicleRegistrationFictitiousTrapInfo).filter(
+        VehicleRegistrationFictitiousTrapInfo.id == trap_info_id
+    ).first()
+    
+    if not trap_info:
+        raise HTTPException(status_code=404, detail="Trap Info (FC) not found")
+    return trap_info
+
+
+def get_trap_info_fictitious_by_fc(db: Session, fictitious_id: int):
+    fc = db.query(VehicleRegistrationFictitious).filter(
+        VehicleRegistrationFictitious.id == fictitious_id
+    ).first()
+    
+    if not fc:
+        raise HTTPException(status_code=404, detail="Fictitious record not found")
+    
+    trap_infos = db.query(VehicleRegistrationFictitiousTrapInfo).filter(
+        VehicleRegistrationFictitiousTrapInfo.fictitious_id == fictitious_id
+    ).all()
+    return trap_infos
+
+
+def update_trap_info_fictitious(db: Session, trap_info_id: int, payload: VehicleRegistrationFictitiousTrapInfoCreateBody):
+    trap_info = get_trap_info_fictitious(db, trap_info_id)
+    
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        if hasattr(trap_info, key):
+            setattr(trap_info, key, value)
+    
+    db.commit()
+    db.refresh(trap_info)
+    return trap_info
+
+
+def delete_trap_info_fictitious(db: Session, trap_info_id: int):
+    trap_info = get_trap_info_fictitious(db, trap_info_id)
+    db.delete(trap_info)
+    db.commit()
+    return {"message": f"Trap Info (FC) {trap_info_id} deleted successfully"}
+
+
+def get_all_trap_info_fictitious(db: Session, skip: int = 0, limit: int = 100):
+    trap_infos = db.query(VehicleRegistrationFictitiousTrapInfo).offset(skip).limit(limit).all()
+    return trap_infos

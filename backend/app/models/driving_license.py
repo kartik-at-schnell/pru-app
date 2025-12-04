@@ -59,6 +59,8 @@ class DriverLicenseContact(BaseModel):
     
     odata_color_tag = Column(String(50))
 
+    is_suppressed = Column(Boolean, default=False, index=True)
+
     # relations
     original_record = relationship("DriverLicenseOriginalRecord", back_populates="contacts")
 
@@ -74,7 +76,7 @@ class DriverLicenseFictitiousTrap(BaseModel):
     
     date = Column(Date) 
     number = Column(String(50)) 
-    fictitious_id_2 = Column(Integer) 
+    fictitious_id = Column(Integer)
     
     test = Column(String(50))
     title = Column(String(255))
@@ -83,10 +85,6 @@ class DriverLicenseFictitiousTrap(BaseModel):
     test2 = Column(String(50))
     content_type = Column(String(100))
     
-    modified_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True))
-    created_by = Column(String(100))
-    modified_by = Column(String(100))
     version = Column(String(50)) 
     attachments = Column(Boolean) 
     type = Column(String(50))
