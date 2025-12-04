@@ -32,6 +32,8 @@ def create_original_record(db: Session, payload: DriverLicenseOriginalCreate):
         agency=payload.agency,
         contact=payload.contact,
         date_issued=payload.date_issued,
+        modified=payload.modified,
+
         approval_status="pending",  # default approval status
         active_status=True  # default active status
     )
@@ -88,7 +90,7 @@ def create_fictitious_trap(db: Session, original_record_id: int, payload: Driver
         # mandatory fields
         # date=payload.date,
         number=payload.number,
-        fictitious_id_2=payload.fictitious_id_2,
+        fictitious_id=payload.fictitious_id,
         # 0ptional fields
         test=payload.test,
         title=payload.title,
@@ -102,7 +104,7 @@ def create_fictitious_trap(db: Session, original_record_id: int, payload: Driver
         folder_child_count=payload.folder_child_count,
         label_setting=payload.label_setting,
         retention_label=payload.retention_label,
-        # retention_label_applied=payload.retention_label_applied,
+        retention_label_applied=payload.retention_label_applied,
         label_applied_by=payload.label_applied_by,
         item_is_record=payload.item_is_record,
         app_created_by=payload.app_created_by,
@@ -137,7 +139,7 @@ def get_all_records(
     limit: int = 100,
     active_status: Optional[str] = None,
     approval_status: Optional[str] = None,
-    active_only: bool = True
+    active_only: Optional[bool] = True
 ):
     query = db.query(DriverLicenseOriginalRecord)
     

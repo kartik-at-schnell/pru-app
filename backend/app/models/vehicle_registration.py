@@ -53,6 +53,8 @@ class VehicleRegistrationMaster(BaseModel):
     wc = Column(String(50))
     cc_alco = Column(String(50))
     type_vehicle_use = Column(String(50))
+
+    is_suppressed = Column(Boolean, default=False, index=True)
  
     contacts = relationship("VehicleRegistrationContact", back_populates="master_record")
     reciprocal_issued = relationship("VehicleRegistrationReciprocalIssued", back_populates="master_record", cascade="save-update, merge", passive_deletes=True,)
@@ -111,6 +113,8 @@ class VehicleRegistrationUnderCover(BaseModel):
     active_status = Column(Boolean, default=True)
     error_text = Column(Text)
     description = Column(Text)
+
+    is_suppressed = Column(Boolean, default=False, index=True)
  
     master_record = relationship("VehicleRegistrationMaster", back_populates="undercover_records")
     trap_info = relationship("VehicleRegistrationUnderCoverTrapInfo", back_populates="undercover_record", cascade="all, delete-orphan")
@@ -162,7 +166,9 @@ class VehicleRegistrationFictitious(BaseModel):
  
     active_status = Column(Boolean, default=True)
     error_text = Column(Text)
-    description = Column(Text)                        
+    description = Column(Text)
+
+    is_suppressed = Column(Boolean, default=False, index=True)                        
  
     master_record = relationship("VehicleRegistrationMaster", back_populates="fictitious_records")
     trap_info = relationship("VehicleRegistrationFictitiousTrapInfo", back_populates="fictitious_record", cascade="all, delete-orphan")
