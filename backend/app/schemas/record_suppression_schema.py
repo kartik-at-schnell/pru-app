@@ -1,37 +1,24 @@
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional, List
 from decimal import Decimal
 
 
 class SuppressRecordRequest(BaseModel):
-    """Request to suppress a record"""
-    record_type: str = Field(..., description="Type of record: vr_master, vr_undercover, vr_fictitious, dl_original")
-    record_id: int = Field(..., description="ID of the record to suppress")
-    reason: str = Field(..., min_length=5, description="Reason for suppression")
+    reason: str = Field(..., min_length=2)
 
     class Config:
         from_attributes = True
-        examples = {
-            "record_type": "vr_master",
-            "record_id": 123,
-            "reason": "Undercover operation - high priority"
-        }
 
 
 class RevokeSuppressionRequest(BaseModel):
-    """Request to revoke (unsuppress) a suppression"""
-    revoke_reason: str = Field(..., min_length=5, description="Reason for revoking suppression")
+    revoke_reason: str = Field(..., min_length=5)
 
     class Config:
         from_attributes = True
-        examples = {
-            "revoke_reason": "Case closed - suspect captured"
-        }
 
 
 class RecordSuppressionResponse(BaseModel):
-    """Response for a single suppression entry"""
     id: int
     record_type: str
     record_id: int
@@ -45,8 +32,18 @@ class RecordSuppressionResponse(BaseModel):
         from_attributes = True
 
 
+class CheckSuppressionResponse(BaseModel):
+    is_suppressed: bool
+    suppression_id: Optional[int] = None
+    reason: Optional[str] = None
+    suppressed_at: Optional[datetime] = None
+    status: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class SuppressionHistoryResponse(BaseModel):
-    """Complete suppression history for a record"""
     record_type: str
     record_id: int
     total_entries: int
@@ -57,7 +54,6 @@ class SuppressionHistoryResponse(BaseModel):
 
 
 class ActiveSuppressionListResponse(BaseModel):
-    """List of currently active (non-revoked) suppressions"""
     suppression_id: int
     record_type: str
     record_id: int
@@ -70,7 +66,6 @@ class ActiveSuppressionListResponse(BaseModel):
 
 
 class ActiveSuppressionsListAllResponse(BaseModel):
-    """Response for listing all active suppressions"""
     total_active: int
     suppressions: List[ActiveSuppressionListResponse]
 
@@ -79,7 +74,6 @@ class ActiveSuppressionsListAllResponse(BaseModel):
 
 
 class SuppressSuccessResponse(BaseModel):
-    """Response when suppression is successful"""
     suppression_id: int
     record_type: str
     record_id: int
@@ -92,23 +86,87 @@ class SuppressSuccessResponse(BaseModel):
 
 
 class RevokeSuccessResponse(BaseModel):
-    """Response when revocation is successful"""
     suppression_id: int
     record_type: str
     record_id: int
     status: str
     revoked_at: datetime
-    message: str = "Suppression revoked - record now visible"
+    message: str = "Suppression revoked successfully"
 
     class Config:
         from_attributes = True
 
 
-class ErrorResponse(BaseModel):
-    """Standard error response"""
-    detail: str
-    status_code: int
-    error_type: str
+class CreateSuppressedVRMasterRequest(BaseModel):
+    license_number: str
+    vehicle_id_number: str
+    registered_owner: str
+    address: str
+    city: str
+    state: str = "California"
+    zip_code: str
+    make: str
+    model: str
+    year_model: int
+    body_type: Optional[str] = None
+    type_license: Optional[str] = None
+    type_vehicle: Optional[str] = None
+    category: Optional[str] = None
+    expiration_date: Optional[date] = None
+    date_issued: Optional[date] = None
+    date_received: Optional[date] = None
+    date_fee_received: Optional[date] = None
+    amount_paid: Optional[Decimal] = None
+    amount_due: Optional[Decimal] = None
+    amount_received: Optional[Decimal] = None
+    use_tax: Optional[Decimal] = None
+    sticker_issued: Optional[str] = None
+    sticker_numbers: Optional[str] = None
+    cert_type: Optional[str] = None
+    mp: Optional[str] = None
+    mo: Optional[str] = None
+    axl: Optional[str] = None
+    wc: Optional[str] = None
+    cc_alco: Optional[str] = None
+    active_status: Optional[bool] = True
+    suppression_reason: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CreateSuppressedVRMasterResponse(BaseModel):
+    record: dict
+    suppression: dict
+    message: str = "VRMaster created and suppressed successfully"
+
+    class Config:
+        from_attributes = True
+
+
+class CreateSuppressedDLOriginalRequest(BaseModel):
+    tln: str
+    tfn: str
+    tdl: str
+    fln: str
+    ffn: str
+    fdl: str
+    agency: Optional[str] = None
+    contact: Optional[str] = None
+    date_issued: Optional[date] = None
+    modified: Optional[datetime] = None
+    approval_status: Optional[str] = "pending"
+    active_status: Optional[bool] = True
+    suppression_reason: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CreateSuppressedDLOriginalResponse(BaseModel):
+    record: dict
+    suppression: dict
+    message: str = "DriverLicense created and suppressed successfully"
 
     class Config:
         from_attributes = True

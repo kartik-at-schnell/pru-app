@@ -1,174 +1,107 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
-from datetime import datetime, timedelta
-from typing import List, Optional
+from sqlalchemy import and_
+from datetime import datetime
+from typing import Optional
 
 from app.models.record_suppression import RecordSuppressionRequest
 from app.schemas.record_suppression_schema import (
+    CreateSuppressedDLOriginalRequest,
+    CreateSuppressedVRMasterRequest,
     SuppressRecordRequest,
     RevokeSuppressionRequest,
-    RecordSuppressionResponse,
     SuppressionHistoryResponse,
     ActiveSuppressionListResponse,
     ActiveSuppressionsListAllResponse,
+    RecordSuppressionResponse
 )
+from app.crud.vehicle_registration_crud import create_master_record
+from app.crud.driving_license_crud import create_original_record
+from app.schemas.vehicle_registration_schema import MasterCreateRequest
+from app.schemas.driving_license_schema import DriverLicenseOriginalCreate as DriverLicenseCreateRequest
 
-
-# ============================================================================
-# SUPPRESS A RECORD
-# ============================================================================
 
 def suppress_record(
     db: Session,
+    record_type: str,
+    record_id: int,
     payload: SuppressRecordRequest
 ) -> RecordSuppressionRequest:
-    """
-    Suppress a record and create audit trail entry.
     
-    Steps:
-    1. Verify record exists and is not already suppressed
-    2. Create RecordSuppressionRequest entry (status: active)
-    3. Mark the actual record as is_suppressed=TRUE
-    
-    Args:
-        db: Database session
-        payload: SuppressRecordRequest with record_type, record_id, reason
-        
-    Returns:
-        RecordSuppressionRequest: The created suppression entry
-        
-    Raises:
-        HTTPException 404: Record not found
-        HTTPException 400: Record already suppressed
-    """
-    
-    # Verify record exists and check if already suppressed
-    record = _get_record_by_type(db, payload.record_type, payload.record_id)
+    record = _get_record_by_type(db, record_type, record_id)
     if not record:
         raise HTTPException(
             status_code=404,
-            detail=f"Record {payload.record_type}#{payload.record_id} not found"
+            detail=f"Record {record_type}#{record_id} not found"
         )
-    
-    # Check if already suppressed
+
     if hasattr(record, 'is_suppressed') and record.is_suppressed:
         raise HTTPException(
             status_code=400,
-            detail=f"Record {payload.record_type}#{payload.record_id} is already suppressed"
+            detail=f"Record {record_type}#{record_id} already suppressed"
         )
-    
-    # Create suppression request entry
+
     suppression = RecordSuppressionRequest(
-        record_type=payload.record_type,
-        record_id=payload.record_id,
+        record_type=record_type,
+        record_id=record_id,
         reason=payload.reason,
         suppressed_at=datetime.utcnow(),
         status="active",
         revoked_at=None,
         revoke_reason=None
     )
-    
+
     db.add(suppression)
-    db.flush()  # Get the ID before commit
-    
-    # Mark the actual record as suppressed
+    db.flush()
+
     record.is_suppressed = True
-    
     db.commit()
     db.refresh(suppression)
-    
+
     return suppression
 
-
-# ============================================================================
-# REVOKE SUPPRESSION (UNSUPPRESS)
-# ============================================================================
 
 def revoke_suppression(
     db: Session,
     suppression_id: int,
     payload: RevokeSuppressionRequest
 ) -> RecordSuppressionRequest:
-    """
-    Revoke (unsuppress) a suppression request.
     
-    Steps:
-    1. Find the suppression request
-    2. Verify it's not already revoked
-    3. Update suppression status to "revoked" with timestamp and reason
-    4. Mark the actual record as is_suppressed=FALSE
-    
-    Args:
-        db: Database session
-        suppression_id: ID of the RecordSuppressionRequest
-        payload: RevokeSuppressionRequest with revoke_reason
-        
-    Returns:
-        RecordSuppressionRequest: Updated suppression entry
-        
-    Raises:
-        HTTPException 404: Suppression not found
-        HTTPException 400: Already revoked
-    """
-    
-    # Find suppression request
     suppression = db.query(RecordSuppressionRequest).filter(
         RecordSuppressionRequest.id == suppression_id
     ).first()
-    
+
     if not suppression:
         raise HTTPException(
             status_code=404,
             detail=f"Suppression request #{suppression_id} not found"
         )
-    
-    # Check if already revoked
+
     if suppression.status == "revoked":
         raise HTTPException(
             status_code=400,
-            detail=f"Suppression request #{suppression_id} is already revoked"
+            detail=f"Suppression #{suppression_id} already revoked"
         )
-    
-    # Find the actual record and unsuppress it
+
     record = _get_record_by_type(db, suppression.record_type, suppression.record_id)
     if record and hasattr(record, 'is_suppressed'):
         record.is_suppressed = False
-    
-    # Update suppression request
+
     suppression.status = "revoked"
     suppression.revoked_at = datetime.utcnow()
     suppression.revoke_reason = payload.revoke_reason
-    
+
     db.commit()
     db.refresh(suppression)
-    
+
     return suppression
 
-
-# ============================================================================
-# GET SUPPRESSION HISTORY
-# ============================================================================
 
 def get_suppression_history(
     db: Session,
     record_type: str,
     record_id: int
 ) -> SuppressionHistoryResponse:
-    """
-    Get complete suppression history for a record.
-    
-    Returns all suppression entries (active AND revoked) for this record,
-    ordered newest first.
-    
-    Args:
-        db: Database session
-        record_type: Type of record (vr_master, vr_undercover, etc)
-        record_id: ID of the record
-        
-    Returns:
-        SuppressionHistoryResponse: Complete history
-    """
     
     entries = db.query(RecordSuppressionRequest).filter(
         and_(
@@ -176,9 +109,9 @@ def get_suppression_history(
             RecordSuppressionRequest.record_id == record_id
         )
     ).order_by(RecordSuppressionRequest.suppressed_at.desc()).all()
-    
+
     history = [RecordSuppressionResponse.from_orm(entry) for entry in entries]
-    
+
     return SuppressionHistoryResponse(
         record_type=record_type,
         record_id=record_id,
@@ -187,42 +120,25 @@ def get_suppression_history(
     )
 
 
-# ============================================================================
-# GET ALL ACTIVE SUPPRESSIONS
-# ============================================================================
-
 def get_active_suppressions(
     db: Session,
     record_type: Optional[str] = None,
     limit: int = 50,
     offset: int = 0
 ) -> ActiveSuppressionsListAllResponse:
-    """
-    Get list of all currently active (non-revoked) suppressions.
-    
-    Args:
-        db: Database session
-        record_type: Filter by type (optional)
-        limit: Number of results to return
-        offset: Pagination offset
-        
-    Returns:
-        ActiveSuppressionsListAllResponse: List of active suppressions
-    """
     
     query = db.query(RecordSuppressionRequest).filter(
         RecordSuppressionRequest.status == "active"
     )
-    
+
     if record_type:
         query = query.filter(RecordSuppressionRequest.record_type == record_type)
-    
+
     total = query.count()
-    
     entries = query.order_by(
         RecordSuppressionRequest.suppressed_at.desc()
     ).offset(offset).limit(limit).all()
-    
+
     suppressions = []
     for entry in entries:
         days_suppressed = (datetime.utcnow() - entry.suppressed_at.replace(tzinfo=None)).days
@@ -234,33 +150,18 @@ def get_active_suppressions(
             suppressed_at=entry.suppressed_at,
             days_suppressed=days_suppressed
         ))
-    
+
     return ActiveSuppressionsListAllResponse(
         total_active=total,
         suppressions=suppressions
     )
 
 
-# ============================================================================
-# SEARCH WITH SUPPRESSION FILTER
-# ============================================================================
-
 def is_record_suppressed(
     db: Session,
     record_type: str,
     record_id: int
 ) -> bool:
-    """
-    Check if a record is currently suppressed.
-    
-    Args:
-        db: Database session
-        record_type: Type of record
-        record_id: ID of record
-        
-    Returns:
-        bool: True if suppressed, False otherwise
-    """
     
     suppression = db.query(RecordSuppressionRequest).filter(
         and_(
@@ -269,7 +170,7 @@ def is_record_suppressed(
             RecordSuppressionRequest.status == "active"
         )
     ).first()
-    
+
     return suppression is not None
 
 
@@ -278,17 +179,6 @@ def get_suppression_for_record(
     record_type: str,
     record_id: int
 ) -> Optional[RecordSuppressionRequest]:
-    """
-    Get current active suppression for a record (if any).
-    
-    Args:
-        db: Database session
-        record_type: Type of record
-        record_id: ID of record
-        
-    Returns:
-        RecordSuppressionRequest or None
-    """
     
     return db.query(RecordSuppressionRequest).filter(
         and_(
@@ -299,22 +189,7 @@ def get_suppression_for_record(
     ).first()
 
 
-# ============================================================================
-# HELPER FUNCTION: GET RECORD BY TYPE
-# ============================================================================
-
 def _get_record_by_type(db: Session, record_type: str, record_id: int):
-    """
-    Helper function to get a record by its type and ID.
-    
-    Args:
-        db: Database session
-        record_type: Type of record (vr_master, vr_undercover, vr_fictitious, dl_original)
-        record_id: ID of the record
-        
-    Returns:
-        The record object or None if not found
-    """
     
     if record_type == "vr_master":
         from app.models.vehicle_registration import VehicleRegistrationMaster
@@ -340,5 +215,137 @@ def _get_record_by_type(db: Session, record_type: str, record_id: int):
             DriverLicenseOriginalRecord.id == record_id
         ).first()
     
-    else:
-        return None
+    return None
+
+
+def create_suppressed_vr_master(
+    db: Session,
+    payload: CreateSuppressedVRMasterRequest
+):
+    
+    suppression_reason = payload.suppression_reason
+    if not suppression_reason:
+        suppression_reason = "Record created in suppressed state"
+
+    master_payload = MasterCreateRequest(
+        license_number=payload.license_number,
+        vehicle_id_number=payload.vehicle_id_number,
+        registered_owner=payload.registered_owner,
+        address=payload.address,
+        city=payload.city,
+        state=payload.state,
+        zip_code=payload.zip_code,
+        make=payload.make,
+        model=payload.model,
+        year_model=payload.year_model,
+        body_type=payload.body_type,
+        type_license=payload.type_license,
+        type_vehicle=payload.type_vehicle,
+        category=payload.category,
+        expiration_date=payload.expiration_date,
+        date_issued=payload.date_issued,
+        date_received=payload.date_received,
+        date_fee_received=payload.date_fee_received,
+        amount_paid=payload.amount_paid,
+        amount_due=payload.amount_due,
+        amount_received=payload.amount_received,
+        use_tax=payload.use_tax,
+        sticker_issued=payload.sticker_issued,
+        sticker_numbers=payload.sticker_numbers,
+        cert_type=payload.cert_type,
+        mp=payload.mp,
+        mo=payload.mo,
+        axl=payload.axl,
+        wc=payload.wc,
+        cc_alco=payload.cc_alco,
+        active_status=payload.active_status
+    )
+
+    try:
+        vr_master = create_master_record(db, master_payload)
+        vr_master.is_suppressed = True
+        db.flush()
+
+        suppression = RecordSuppressionRequest(
+            record_type="vr_master",
+            record_id=vr_master.id,
+            reason=suppression_reason,
+            suppressed_at=datetime.utcnow(),
+            status="active",
+            revoked_at=None,
+            revoke_reason=None
+        )
+
+        db.add(suppression)
+        db.commit()
+        db.refresh(vr_master)
+        db.refresh(suppression)
+
+        return {
+            "record": vr_master,
+            "suppression": suppression
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error creating suppressed VRMaster: {str(e)}"
+        )
+
+
+def create_suppressed_dl_original(
+    db: Session,
+    payload: CreateSuppressedDLOriginalRequest
+):
+    
+    suppression_reason = payload.suppression_reason
+    if not suppression_reason:
+        suppression_reason = "Record created in suppressed state"
+
+    dl_payload = DriverLicenseCreateRequest(
+        tln=payload.tln,
+        tfn=payload.tfn,
+        tdl=payload.tdl,
+        fln=payload.fln,
+        ffn=payload.ffn,
+        fdl=payload.fdl,
+        agency=payload.agency,
+        contact=payload.contact,
+        date_issued=payload.date_issued,
+        modified=payload.modified,
+        approval_status=payload.approval_status,
+        active_status=payload.active_status
+    )
+
+    try:
+        dl_record = create_original_record(db, dl_payload)
+        dl_record.is_suppressed = True
+        db.flush()
+
+        suppression = RecordSuppressionRequest(
+            record_type="dl_original",
+            record_id=dl_record.id,
+            reason=suppression_reason,
+            suppressed_at=datetime.utcnow(),
+            status="active",
+            revoked_at=None,
+            revoke_reason=None
+        )
+
+        db.add(suppression)
+        db.commit()
+        db.refresh(dl_record)
+        db.refresh(suppression)
+
+        return {
+            "record": dl_record,
+            "suppression": suppression
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error creating suppressed DriverLicense: {str(e)}"
+        )
