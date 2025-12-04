@@ -80,7 +80,7 @@ router = APIRouter(prefix="/vehicle-registration", tags=["Vehicle Registration"]
 def create_vehicle_record(
     record_type: str = Query(..., regex="^(master|undercover|fictitious)$"),
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(RoleChecker("Admin")),
+    current_user: user_models.User = Depends(RoleChecker("Admin","Supervisor / Manager","User")),
     permission_check = Depends(PermissionChecker("create_new_vr")),
     payload: Union[
         MasterCreateRequest,
@@ -132,7 +132,10 @@ def list_vehicles(
     record_type: Optional[str] = Query(None, description="master, undercover, or fictitious"),
     approval_status: Optional[str] = Query(None, description="pending, approved, rejected, on_hold"),
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    # current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin","Supervisor / Manager","User")),
+    permission_check = Depends(PermissionChecker("view_vr_records")),
+    
 ):
     try:
         vehicle_list = get_all_vehicles(

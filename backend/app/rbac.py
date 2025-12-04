@@ -42,21 +42,21 @@ def has_permission(slug: str):
 
 
 class RoleChecker:
-    def __init__(self, role_name: str):
-        self.role_name = role_name
+    def __init__(self, *allowed_roles: str):
+        self.allowed_roles = allowed_roles
 
     def __call__(self, current_user: user_models.User = Depends(get_current_user)) -> user_models.User:
-        # Check if user has the required role
+        # Check if user has any of the required roles
         has_role = False
         for role in current_user.roles:
-            if role.name == self.role_name:
+            if role.name in self.allowed_roles:
                 has_role = True
                 break
         
         if not has_role:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Operation not permitted: Requires '{self.role_name}' role"
+                detail=f"Operation not permitted: have roles: {', '.join(self.allowed_roles)}"
             )
         
         return current_user
