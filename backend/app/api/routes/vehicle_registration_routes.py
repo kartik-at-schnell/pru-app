@@ -161,7 +161,9 @@ def update_vehicle(
     record_id: int,  # Changed from str to int
     update_data: VehicleRegistrationMasterBase,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    #current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin","Supervisor / Manager","User")),
+    permission_check = Depends(PermissionChecker("view_vr_records")),
 ):
     updated = update_vehicle_record(db, record_id, update_data)
     if not updated:
@@ -176,7 +178,12 @@ def update_vehicle(
 
 # Details endpoint
 @router.get("/{master_id}/details", response_model=ApiResponse[VehicleRegistrationMasterDetails])
-def get_master_record_details(master_id: str, db: Session = Depends(get_db), current_user: user_models.User = Depends(get_current_user)):
+def get_master_record_details(master_id: str, db: Session = Depends(get_db), 
+                              #current_user: user_models.User = Depends(get_current_user)
+                                current_user: user_models.User = Depends(RoleChecker("Admin","Supervisor / Manager","User")),
+                                permission_check = Depends(PermissionChecker("view_vr_records")),
+                              
+                              ):
     db_record = get_vehicle_master_details(db=db, master_id=master_id)
     if db_record is None:
         raise HTTPException(status_code=404, detail="Vehicle Master Record not found")
