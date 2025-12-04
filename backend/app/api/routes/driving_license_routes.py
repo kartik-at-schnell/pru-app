@@ -216,7 +216,6 @@ def create_fictitious_trap(
     payload: DriverLicenseFictitiousTrapCreate,
     db: Session = Depends(get_db)
 ):
-    """Create a new fictitious trap for a DL record"""
     trap = crud.create_fictitious_trap(db, record_id, payload)
     return trap
 

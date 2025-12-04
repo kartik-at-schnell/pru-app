@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.routes import document_routes
 from app.api.routes import driving_license_routes
 from app.security import get_current_user
-from app.api.routes import record_supression_routes
+from app.api.routes import record_suppression_routes
 
 
 app = FastAPI()
@@ -51,7 +51,7 @@ router.include_router(vehicle_registration_routes.router)
 router.include_router(driving_license_routes.router)
 router.include_router(action_routes.router)
 router.include_router(dashboard_routes.router)
-router.include_router(record_supression_routes.router)
+router.include_router(record_suppression_routes.router)
 
 app.include_router(router)
 

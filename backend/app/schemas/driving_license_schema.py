@@ -17,7 +17,9 @@ class DriverLicenseOriginalBase(BaseModel):
     contact: Optional[str] = None
     date_issued: Optional[date] = None
     modified: Optional[datetime] = None
-    approval_status: Optional[str] = None  
+    approval_status: Optional[str] = None 
+    created_at: Optional[datetime] = None 
+    created_by: Optional[int] = None  
 
 
 class DriverLicenseContactBase(BaseModel):
@@ -46,7 +48,7 @@ class DriverLicenseContactBase(BaseModel):
 class DriverLicenseFictitiousTrapBase(BaseModel):
     # date: Optional[date] = None
     number: Optional[str] = None
-    fictitious_id_2: Optional[int] = None
+    fictitious_id: Optional[int] = None
     test: Optional[str] = None
     title: Optional[str] = None
     compliance_asset_id: Optional[str] = None
@@ -64,11 +66,11 @@ class DriverLicenseFictitiousTrapBase(BaseModel):
     folder_child_count: Optional[int] = None
     label_setting: Optional[str] = None
     retention_label: Optional[str] = None
-    # retention_label_applied: Optional[date] = None
+    retention_label_applied: Optional[date] = None
     label_applied_by: Optional[str] = None
     item_is_record: Optional[bool] = None
-    app_created_by: Optional[str] = None
-    app_modified_by: Optional[str] = None
+    app_created_by: Optional[int] = None
+    app_modified_by: Optional[int] = None
 
 
 # CREATE Schemas
@@ -80,14 +82,18 @@ class DriverLicenseOriginalCreate(BaseModel):
     tdl: str = Field(..., description="True Driver License")
     
     active_status: Optional[bool] = None
+
     ffn: Optional[str] = None
     fln: Optional[str] = None
     fdl: Optional[str] = None
+    
     agency: Optional[str] = None
     contact: Optional[str] = None
     date_issued: Optional[date] = None
     modified: Optional[datetime] = None
     approval_status: Optional[str] = None
+
+    agency: Optional[str] = None
 
 
 class DriverLicenseContactCreate(DriverLicenseContactBase):
@@ -136,8 +142,10 @@ class DriverLicenseFictitiousTrapResponse(DriverLicenseFictitiousTrapBase):
 class DriverLicenseOriginalResponse(DriverLicenseOriginalBase):
     id: int
     active_status: Optional[bool] = None
+    created_by: Optional[int] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    updated_by: Optional[int] = None
     
     model_config = ConfigDict(from_attributes=True)
 

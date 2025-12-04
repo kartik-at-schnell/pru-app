@@ -1,85 +1,114 @@
 from pydantic import BaseModel, Field
+from datetime import datetime
 from typing import Optional, List
-from datetime import date, datetime
+from decimal import Decimal
 
-# detailed 1
 
-class SuppressionDetail1Base(BaseModel):
+class SuppressRecordRequest(BaseModel):
+    """Request to suppress a record"""
+    record_type: str = Field(..., description="Type of record: vr_master, vr_undercover, vr_fictitious, dl_original")
+    record_id: int = Field(..., description="ID of the record to suppress")
+    reason: str = Field(..., min_length=5, description="Reason for suppression")
 
-    date_requested: Optional[datetime] = None
-    driver_license_vehicle_plate: Optional[str] = None
-    person_requesting_access: str
-    reason: str
-    amount_of_time_open: str
-    initials: Optional[str] = None
-
-class SuppressionDetail1Create(SuppressionDetail1Base):
-
-    pass
-
-class SuppressionDetail1Response(SuppressionDetail1Base):
-    
-    id: int
-    suppression_id: int
-    created_at: datetime
-    
     class Config:
         from_attributes = True
+        examples = {
+            "record_type": "vr_master",
+            "record_id": 123,
+            "reason": "Undercover operation - high priority"
+        }
 
 
-# detailed 2
+class RevokeSuppressionRequest(BaseModel):
+    """Request to revoke (unsuppress) a suppression"""
+    revoke_reason: str = Field(..., min_length=5, description="Reason for revoking suppression")
 
-class SuppressionDetail2Base(BaseModel):
-    old_name: Optional[str] = None
-    old_driver_license_vehicle_plate: Optional[str] = None
-
-class SuppressionDetail2Create(SuppressionDetail2Base):
-
-    pass
-
-class SuppressionDetail2Response(SuppressionDetail2Base):
-
-    id: int
-    suppression_id: int
-    created_at: datetime
-    
     class Config:
         from_attributes = True
+        examples = {
+            "revoke_reason": "Case closed - suspect captured"
+        }
 
 
-# master schemas
-
-class RecordSuppressionBase(BaseModel):
-    record_type: Optional[str] = Field(None, description="vr_master, dl_original, dl_fictitious, or None if no linking")
-    record_id: Optional[int] = Field(None, description="Optional link to actual VR/DL record")
-    reason: str
-    reason_description: Optional[str] = None
-    effective_date: Optional[date] = None
-    expiration_date: Optional[date] = None
-
-class RecordSuppressionCreate(RecordSuppressionBase):
-    created_by: str
-
-class RecordSuppressionUpdate(BaseModel):
-    reason: Optional[str] = None
-    reason_description: Optional[str] = None
-    expiration_date: Optional[date] = None
-    status: Optional[str] = None
-
-class RecordSuppressionResponse(RecordSuppressionBase):
+class RecordSuppressionResponse(BaseModel):
+    """Response for a single suppression entry"""
     id: int
+    record_type: str
+    record_id: int
+    reason: str
+    suppressed_at: datetime
     status: str
-    is_active: int
-    created_by: str
-    created_at: datetime
-    updated_at: datetime
-    
+    revoked_at: Optional[datetime] = None
+    revoke_reason: Optional[str] = None
+
     class Config:
         from_attributes = True
 
-class RecordSuppressionDetailedResponse(RecordSuppressionResponse):
-    details_1: List[SuppressionDetail1Response] = []
-    details_2: List[SuppressionDetail2Response] = []
-    
+
+class SuppressionHistoryResponse(BaseModel):
+    """Complete suppression history for a record"""
+    record_type: str
+    record_id: int
+    total_entries: int
+    history: List[RecordSuppressionResponse]
+
+    class Config:
+        from_attributes = True
+
+
+class ActiveSuppressionListResponse(BaseModel):
+    """List of currently active (non-revoked) suppressions"""
+    suppression_id: int
+    record_type: str
+    record_id: int
+    reason: str
+    suppressed_at: datetime
+    days_suppressed: int
+
+    class Config:
+        from_attributes = True
+
+
+class ActiveSuppressionsListAllResponse(BaseModel):
+    """Response for listing all active suppressions"""
+    total_active: int
+    suppressions: List[ActiveSuppressionListResponse]
+
+    class Config:
+        from_attributes = True
+
+
+class SuppressSuccessResponse(BaseModel):
+    """Response when suppression is successful"""
+    suppression_id: int
+    record_type: str
+    record_id: int
+    status: str
+    suppressed_at: datetime
+    message: str = "Record suppressed successfully"
+
+    class Config:
+        from_attributes = True
+
+
+class RevokeSuccessResponse(BaseModel):
+    """Response when revocation is successful"""
+    suppression_id: int
+    record_type: str
+    record_id: int
+    status: str
+    revoked_at: datetime
+    message: str = "Suppression revoked - record now visible"
+
+    class Config:
+        from_attributes = True
+
+
+class ErrorResponse(BaseModel):
+    """Standard error response"""
+    detail: str
+    status_code: int
+    error_type: str
+
     class Config:
         from_attributes = True

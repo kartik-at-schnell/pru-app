@@ -1,55 +1,29 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
 from datetime import datetime
-from app.database import Base
 from .base import BaseModel
 
-class RecordSuppression(BaseModel):
+# audit trail for tracking suppression reqs
+class RecordSuppressionRequest(BaseModel):
+    __tablename__ = "record_suppression_requests"
 
-    __tablename__ = "record_suppression_master"
+    id = Column(Integer, primary_key=True, index=True, nullable=False)
     
-    id = Column(Integer, primary_key=True, index=True)
+    record_type = Column(String(50), nullable=False, index=True)
     
-    record_type = Column(String(50), nullable=True)  # vr, dl
-    record_id = Column(Integer, nullable=True)  # actual record ID (optional)
-    reason = Column(String(100), nullable=False)  # court_order, privacy_request
-    reason_description = Column(Text, nullable=True)
-    effective_date = Column(DateTime, nullable=False, default=datetime.utcnow)
-    expiration_date = Column(DateTime, nullable=True) 
-
-    status = Column(String(50), default="active")  # active, expired, removed, etc.
-    is_active = Column(Integer, default=True)
+    record_id = Column(Integer, nullable=False, index=True)
     
-    details_1 = relationship("SuppressionDetail1", back_populates="suppression", cascade="all, delete-orphan")
-    details_2 = relationship("SuppressionDetail2", back_populates="suppression", cascade="all, delete-orphan")
-
-
-class SuppressionDetail1(BaseModel):
-
-    __tablename__ = "suppression_detail_1"
+    reason = Column(Text, nullable=False)
     
-    id = Column(Integer, primary_key=True, index=True)
-    suppression_id = Column(Integer, ForeignKey("record_suppression_master.id", ondelete="CASCADE"), nullable=False)
+    suppressed_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False, index=True)
     
-    date_requested = Column(DateTime, nullable=False, default=datetime.utcnow)
-    driver_license_vehicle_plate = Column(String(100), nullable=True)  # which plate/license
-    person_requesting_access = Column(String(200), nullable=False)  # who asked
-    reason = Column(Text, nullable=False)  # why
-    amount_of_time_open = Column(String(100), nullable=False)  # how long
-    initials = Column(String(10), nullable=True)  # approver        
-    # relationship
-    suppression = relationship("RecordSuppression", back_populates="details_1")
-
-
-class SuppressionDetail2(BaseModel):
-
-    __tablename__ = "suppression_detail_2"
+    status = Column(String(20), default="active", nullable=False, index=True)
     
-    id = Column(Integer, primary_key=True, index=True)
-    suppression_id = Column(Integer, ForeignKey("record_suppression_master.id", ondelete="CASCADE"), nullable=False)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
     
-    # historical aliases (from HLD)
-    old_name = Column(String(200), nullable=True)  # previous name/alias
-    old_driver_license_vehicle_plate = Column(String(100), nullable=True)  # previous plate/license    
-    # relationship
-    suppression = relationship("RecordSuppression", back_populates="details_2")
+    revoke_reason = Column(Text, nullable=True)
+    
+    def __repr__(self):
+        return (
+            f"<RecordSuppressionRequest(id={self.id}, record_type={self.record_type}, "
+            f"record_id={self.record_id}, status={self.status})>"
+        )
