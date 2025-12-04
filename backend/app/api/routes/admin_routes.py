@@ -66,12 +66,12 @@ def get_permissions(db: Session = Depends(get_db)):
 
 @router.post("/permissions", response_model=rbac_schema.Permission)
 def create_permission(perm_in: rbac_schema.PermissionCreate, db: Session = Depends(get_db)):
-    existing_perm = db.query(user_models.Permission).filter(user_models.Permission.slug == perm_in.slug).first()
+    existing_perm = db.query(user_models.Permission).filter(user_models.Permission.permission == perm_in.permission).first()
     if existing_perm:
         raise HTTPException(status_code=400, detail="Permission already exists")
         
     new_perm = user_models.Permission(
-        slug=perm_in.slug
+        permission=perm_in.permission
     )
     db.add(new_perm)
     db.commit()
@@ -105,3 +105,34 @@ def assign_roles_to_user(
     db.commit()
     
     return {"message": "Roles assigned successfully", "user_id": user_id, "role_ids": [r.id for r in user.roles]}
+
+
+@router.post("/users/roles/by-email")
+def assign_roles_to_user_by_email(
+    assignment: rbac_schema.UserRoleAssignmentByEmail,
+    db: Session = Depends(get_db)
+):
+    # Fetch user by email
+    user = db.query(user_models.User).filter(user_models.User.email == assignment.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User with email {assignment.email} not found")
+        
+    # Fetch roles
+    roles = db.query(user_models.Role).filter(user_models.Role.id.in_(assignment.role_ids)).all()
+    
+    # Validate that all role IDs were found
+    if len(roles) != len(assignment.role_ids):
+        found_ids = [role.id for role in roles]
+        missing_ids = set(assignment.role_ids) - set(found_ids)
+        raise HTTPException(status_code=400, detail=f"Roles not found: {missing_ids}")
+        
+    # Assign roles (replace existing)
+    user.roles = roles
+    db.commit()
+    
+    return {
+        "message": "Roles assigned successfully", 
+        "email": user.email, 
+        "user_id": user.id, 
+        "role_ids": [r.id for r in user.roles]
+    }

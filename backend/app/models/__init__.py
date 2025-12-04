@@ -10,7 +10,7 @@ from .vehicle_registration import (
     VehicleRegistrationReciprocalReceived
 )
 
-from .user_models import user_roles_table, User, Role
+from .user_models import user_roles_table, User, Role, EmailRoleMapping, Module, Permission
 
 from .document_library import DocumentLibrary, DocumentAuditLog
 
@@ -32,6 +32,9 @@ __all__ = [
     "VehicleRegistrationReciprocalReceived",
     "User",
     "Role",
+    "EmailRoleMapping",
+    "Module",
+    "Permission",
     "user_roles_table",
     "DocumentLibrary",
     "DocumentAuditLog",

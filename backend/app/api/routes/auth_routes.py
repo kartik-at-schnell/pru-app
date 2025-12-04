@@ -82,13 +82,13 @@ def get_current_user_profile(
             module_name = perm.module.name if perm.module else "Other"
             if module_name not in permissions_by_module:
                 permissions_by_module[module_name] = set()
-            permissions_by_module[module_name].add(perm.slug)
+            permissions_by_module[module_name].add(perm.permission)
             
     # Convert to list of ModulePermissions
     module_permissions_list = []
     for module, slugs in permissions_by_module.items():
         module_permissions_list.append(
-            user_schema.ModulePermissions(module=module, slugs=list(slugs))
+            user_schema.ModulePermissions(module=module, permissions=list(slugs))
         )
 
     # Create response object

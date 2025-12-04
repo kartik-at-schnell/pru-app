@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 class ModuleBase(BaseModel):
     name: str
@@ -14,7 +14,7 @@ class Module(ModuleBase):
         from_attributes = True
 
 class PermissionBase(BaseModel):
-    slug: str
+    permission: str
     module_id: Optional[int] = None
 
 class PermissionCreate(PermissionBase):
@@ -44,4 +44,8 @@ class Role(RoleBase):
         from_attributes = True
 
 class UserRoleAssignment(BaseModel):
+    role_ids: List[int]
+
+class UserRoleAssignmentByEmail(BaseModel):
+    email: EmailStr
     role_ids: List[int]

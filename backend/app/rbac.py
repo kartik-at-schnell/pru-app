@@ -11,7 +11,7 @@ class PermissionChecker:
         has_perm = False
         for role in current_user.roles:
             for permission in role.permissions:
-                if permission.slug == self.permission_slug:
+                if permission.permission == self.permission_slug:
                     has_perm = True
                     break
             if has_perm:
