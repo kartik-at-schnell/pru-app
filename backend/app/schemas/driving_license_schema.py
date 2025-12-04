@@ -69,8 +69,8 @@ class DriverLicenseFictitiousTrapBase(BaseModel):
     retention_label_applied: Optional[date] = None
     label_applied_by: Optional[str] = None
     item_is_record: Optional[bool] = None
-    app_created_by: Optional[int] = None
-    app_modified_by: Optional[int] = None
+    app_created_by: Optional[str] = None
+    app_modified_by: Optional[str] = None
 
 
 # CREATE Schemas
