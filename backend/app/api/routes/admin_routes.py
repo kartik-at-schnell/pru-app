@@ -66,12 +66,12 @@ def get_permissions(db: Session = Depends(get_db)):
 
 @router.post("/permissions", response_model=rbac_schema.Permission)
 def create_permission(perm_in: rbac_schema.PermissionCreate, db: Session = Depends(get_db)):
-    existing_perm = db.query(user_models.Permission).filter(user_models.Permission.permission == perm_in.permission).first()
+    existing_perm = db.query(user_models.Permission).filter(user_models.Permission.permission_name == perm_in.permission_name).first()
     if existing_perm:
         raise HTTPException(status_code=400, detail="Permission already exists")
         
     new_perm = user_models.Permission(
-        permission=perm_in.permission
+        permission_name=perm_in.permission_name
     )
     db.add(new_perm)
     db.commit()
@@ -106,7 +106,6 @@ def assign_roles_to_user(
     
     return {"message": "Roles assigned successfully", "user_id": user_id, "role_ids": [r.id for r in user.roles]}
 
-
 @router.post("/users/roles/by-email")
 def assign_roles_to_user_by_email(
     assignment: rbac_schema.UserRoleAssignmentByEmail,
@@ -116,7 +115,7 @@ def assign_roles_to_user_by_email(
     user = db.query(user_models.User).filter(user_models.User.email == assignment.email).first()
     if not user:
         raise HTTPException(status_code=404, detail=f"User with email {assignment.email} not found")
-        
+
     # Fetch roles
     roles = db.query(user_models.Role).filter(user_models.Role.id.in_(assignment.role_ids)).all()
     
@@ -130,9 +129,4 @@ def assign_roles_to_user_by_email(
     user.roles = roles
     db.commit()
     
-    return {
-        "message": "Roles assigned successfully", 
-        "email": user.email, 
-        "user_id": user.id, 
-        "role_ids": [r.id for r in user.roles]
-    }
+    return {"message": f"Roles assigned successfully to {user.email}", "user_email": user.email, "role_ids": [r.id for r in user.roles]}

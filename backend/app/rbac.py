@@ -3,15 +3,15 @@ from app.models import user_models
 from app.security import get_current_user
 
 class PermissionChecker:
-    def __init__(self, permission_slug: str):
-        self.permission_slug = permission_slug
+    def __init__(self, permission_name: str):
+        self.permission_name = permission_name
 
     def __call__(self, current_user: user_models.User = Depends(get_current_user)) -> user_models.User:
         # Check if user has the required permission through any of their roles
         has_perm = False
         for role in current_user.roles:
             for permission in role.permissions:
-                if permission.permission == self.permission_slug:
+                if permission.permission_name == self.permission_name:
                     has_perm = True
                     break
             if has_perm:
@@ -32,7 +32,7 @@ class PermissionChecker:
         if not has_perm:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Operation not permitted: Requires '{self.permission_slug}' permission"
+                detail=f"Operation not permitted: Requires '{self.permission_name}' permission"
             )
         
         return current_user

@@ -72,7 +72,7 @@ class Permission(Base):
     __tablename__ = "permissions"
 
     id = Column(Integer, primary_key=True, index=True)
-    permission = Column(String(100), unique=True, index=True, nullable=False)
+    permission_name = Column(String(100), unique=True, index=True, nullable=False)
     module_id = Column(Integer, ForeignKey("modules.id"), nullable=True)
 
     module = relationship("Module", back_populates="permissions")
