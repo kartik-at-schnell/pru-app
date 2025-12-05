@@ -67,6 +67,7 @@ from app.security import get_current_user
 from app.schemas.base_schema import ApiResponse
 from app.models import user_models
 from app.crud.driving_license_crud import delete_contact, update_contact
+from app.rbac import PermissionChecker, RoleChecker
 
 router = APIRouter(prefix="/vehicle-registration", tags=["Vehicle Registration"])
     
@@ -79,7 +80,8 @@ router = APIRouter(prefix="/vehicle-registration", tags=["Vehicle Registration"]
 def create_vehicle_record(
     record_type: str = Query(..., regex="^(master|undercover|fictitious)$"),
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user),
+    current_user: user_models.User = Depends(RoleChecker("Admin","Supervisor / Manager","User")),
+    permission_check = Depends(PermissionChecker("create_new_vr")),
     payload: Union[
         MasterCreateRequest,
         UnderCoverCreateRequest,
@@ -130,7 +132,10 @@ def list_vehicles(
     record_type: Optional[str] = Query(None, description="master, undercover, or fictitious"),
     approval_status: Optional[str] = Query(None, description="pending, approved, rejected, on_hold"),
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    # current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin","Supervisor / Manager")),
+    permission_check = Depends(PermissionChecker("view_vr_records")),
+    
 ):
     try:
         vehicle_list = get_all_vehicles(
@@ -156,7 +161,9 @@ def update_vehicle(
     record_id: int,  # Changed from str to int
     update_data: VehicleRegistrationMasterBase,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    #current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin","Supervisor / Manager","User")),
+    permission_check = Depends(PermissionChecker("Edit VR Record" )),
 ):
     updated = update_vehicle_record(db, record_id, update_data)
     if not updated:
@@ -171,7 +178,12 @@ def update_vehicle(
 
 # Details endpoint
 @router.get("/{master_id}/details", response_model=ApiResponse[VehicleRegistrationMasterDetails])
-def get_master_record_details(master_id: str, db: Session = Depends(get_db), current_user: user_models.User = Depends(get_current_user)):
+def get_master_record_details(master_id: str, db: Session = Depends(get_db), 
+                              #current_user: user_models.User = Depends(get_current_user)
+                                current_user: user_models.User = Depends(RoleChecker("Admin","Supervisor / Manager","User")),
+                                permission_check = Depends(PermissionChecker("view_vr_records")),
+                              
+                              ):
     db_record = get_vehicle_master_details(db=db, master_id=master_id)
     if db_record is None:
         raise HTTPException(status_code=404, detail="Vehicle Master Record not found")

@@ -2,7 +2,7 @@ from sqlalchemy import Column, DateTime, Integer, String, Time, Boolean, Text, F
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
-Base = declarative_base()
+from app.database import Base
 
 # base model with common fields for all tables
 class BaseModel(Base):
