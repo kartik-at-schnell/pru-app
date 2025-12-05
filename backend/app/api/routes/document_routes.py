@@ -34,6 +34,7 @@ def get_all_documents(
     if document_type:
         query = query.filter(DocumentLibrary.document_type == document_type)
 
+    docs = query.filter(DocumentLibrary.is_archived == False)
     docs = query.order_by(DocumentLibrary.created_at.desc()).all()
     return ApiResponse[List[DocumentResponse]](data=docs)
 

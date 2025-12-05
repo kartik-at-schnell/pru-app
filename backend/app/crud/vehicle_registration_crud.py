@@ -159,6 +159,9 @@ def get_all_vehicles(db: Session,
 
     if search:
         query = query.filter(model.license_number.ilike(f"%{search}"))
+
+    query = query.filter(model.is_suppressed == False) # exclude suppressed records
+
     return query.offset(skip).limit(limit).all()
 
 # update

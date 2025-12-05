@@ -294,6 +294,7 @@ class BaseVehicleRegistrationCreate(BaseModel):
     sticker_numbers : Optional[str] = None
     body_type: Optional[str]
     model: Optional[str] = None
+    category: Optional[str] = None
 
     cert_type : Optional[str] = None
     mp : Optional[str] = None

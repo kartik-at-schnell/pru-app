@@ -10,6 +10,11 @@ from app.schemas.record_suppression_schema import (
     ActiveSuppressionsListAllResponse,
     SuppressSuccessResponse,
     RevokeSuccessResponse,
+    CheckSuppressionResponse,
+    CreateSuppressedVRMasterRequest,
+    CreateSuppressedDLOriginalRequest,
+    CreateSuppressedVRMasterResponse,
+    CreateSuppressedDLOriginalResponse
 )
 from app.crud.record_suppression_crud import (
     suppress_record,
@@ -18,6 +23,8 @@ from app.crud.record_suppression_crud import (
     get_active_suppressions,
     is_record_suppressed,
     get_suppression_for_record,
+    create_suppressed_vr_master,
+    create_suppressed_dl_original
 )
 
 router = APIRouter(
@@ -30,42 +37,20 @@ router = APIRouter(
     }
 )
 
-
-# ============================================================================
-# POST: SUPPRESS A RECORD
-# ============================================================================
-
+# suppress a rrecord
 @router.post(
-    "/suppress",
+    "/suppress/{record_type}/{record_id}",
     response_model=SuppressSuccessResponse,
-    summary="Suppress a record",
-    description="Hide a record from normal searches. Creates audit trail entry.",
+    status_code=201
 )
 async def suppress_record_endpoint(
+    record_type: str,
+    record_id: int,
     payload: SuppressRecordRequest,
     db: Session = Depends(get_db)
 ):
-    """
-    Suppress (hide) a record.
-    
-    Supported record types:
-    - vr_master: Vehicle Registration Master
-    - vr_undercover: Vehicle Registration Undercover
-    - vr_fictitious: Vehicle Registration Fictitious
-    - dl_original: Driver License Original
-    
-    Example request:
-    ```json
-    {
-      "record_type": "vr_master",
-      "record_id": 123,
-      "reason": "Undercover operation - high priority"
-    }
-    ```
-    """
     try:
-        suppression = suppress_record(db, payload)
-        
+        suppression = suppress_record(db, record_type, record_id, payload)
         return SuppressSuccessResponse(
             suppression_id=suppression.id,
             record_type=suppression.record_type,
@@ -83,46 +68,25 @@ async def suppress_record_endpoint(
         )
 
 
-# ============================================================================
-# PUT: REVOKE SUPPRESSION (UNSUPPRESS)
-# ============================================================================
-
 @router.put(
     "/revoke/{suppression_id}",
     response_model=RevokeSuccessResponse,
-    summary="Revoke a suppression",
-    description="Unsuppress a record - make it visible again.",
+    status_code=200
 )
 async def revoke_suppression_endpoint(
     suppression_id: int,
     payload: RevokeSuppressionRequest,
     db: Session = Depends(get_db)
 ):
-    """
-    Revoke (unsuppress) a suppression request.
-    
-    This will:
-    1. Mark the suppression as "revoked"
-    2. Make the record visible again
-    3. Log the revocation reason
-    
-    Example request:
-    ```json
-    {
-      "revoke_reason": "Case closed - suspect captured"
-    }
-    ```
-    """
     try:
         suppression = revoke_suppression(db, suppression_id, payload)
-        
         return RevokeSuccessResponse(
             suppression_id=suppression.id,
             record_type=suppression.record_type,
             record_id=suppression.record_id,
             status=suppression.status,
             revoked_at=suppression.revoked_at,
-            message="Suppression revoked - record now visible"
+            message="Suppression revoked successfully"
         )
     except HTTPException as e:
         raise e
@@ -133,33 +97,16 @@ async def revoke_suppression_endpoint(
         )
 
 
-# ============================================================================
-# GET: SUPPRESSION HISTORY
-# ============================================================================
-
 @router.get(
     "/history/{record_type}/{record_id}",
     response_model=SuppressionHistoryResponse,
-    summary="Get suppression history",
-    description="View complete suppression history (active and revoked) for a record.",
+    status_code=200
 )
 async def get_history_endpoint(
     record_type: str,
     record_id: int,
     db: Session = Depends(get_db)
 ):
-    """
-    Get complete suppression history for a record.
-    
-    Returns:
-    - All suppressions (active and revoked)
-    - Sorted by most recent first
-    - Includes suppression and revocation reasons
-    - Timestamps for all events
-    
-    Example path:
-    `/record-suppression/history/vr_master/123`
-    """
     try:
         history = get_suppression_history(db, record_type, record_id)
         return history
@@ -170,15 +117,10 @@ async def get_history_endpoint(
         )
 
 
-# ============================================================================
-# GET: LIST ALL ACTIVE SUPPRESSIONS
-# ============================================================================
-
 @router.get(
     "/list",
     response_model=ActiveSuppressionsListAllResponse,
-    summary="List active suppressions",
-    description="Get all records that are currently suppressed (hidden).",
+    status_code=200
 )
 async def list_active_suppressions_endpoint(
     record_type: str = Query(None, description="Filter by record type (optional)"),
@@ -186,17 +128,6 @@ async def list_active_suppressions_endpoint(
     offset: int = Query(0, ge=0, description="Pagination offset"),
     db: Session = Depends(get_db)
 ):
-    """
-    List all currently active suppressions.
-    
-    Query parameters:
-    - record_type (optional): Filter by type (vr_master, vr_undercover, etc)
-    - limit: How many results to return (default 50, max 100)
-    - offset: For pagination
-    
-    Example:
-    `/record-suppression/list?record_type=vr_master&limit=50&offset=0`
-    """
     try:
         result = get_active_suppressions(
             db,
@@ -212,14 +143,10 @@ async def list_active_suppressions_endpoint(
         )
 
 
-# ============================================================================
-# GET: CHECK IF RECORD IS SUPPRESSED
-# ============================================================================
-
 @router.get(
     "/check/{record_type}/{record_id}",
-    summary="Check suppression status",
-    description="Check if a specific record is currently suppressed.",
+    response_model=CheckSuppressionResponse,
+    status_code=200
 )
 async def check_suppression_endpoint(
     record_type: str,
@@ -228,22 +155,102 @@ async def check_suppression_endpoint(
 ):
     try:
         suppression = get_suppression_for_record(db, record_type, record_id)
-        
         if suppression:
-            return {
-                "is_suppressed": True,
-                "suppression_id": suppression.id,
-                "reason": suppression.reason,
-                "suppressed_at": suppression.suppressed_at
-            }
+            return CheckSuppressionResponse(
+                is_suppressed=True,
+                suppression_id=suppression.id,
+                reason=suppression.reason,
+                suppressed_at=suppression.suppressed_at,
+                status=suppression.status
+            )
         else:
-            return {
-                "is_suppressed": False,
-                "suppression_id": None,
-                "reason": None
-            }
+            return CheckSuppressionResponse(
+                is_suppressed=False,
+                suppression_id=None,
+                reason=None,
+                suppressed_at=None,
+                status=None
+            )
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Error checking suppression: {str(e)}"
+        )
+
+
+@router.post(
+    "/create-suppressed/vr-master",
+    response_model=CreateSuppressedVRMasterResponse,
+    status_code=201
+)
+async def create_suppressed_vr_master_endpoint(
+    payload: CreateSuppressedVRMasterRequest,
+    db: Session = Depends(get_db)
+):
+    try:
+        result = create_suppressed_vr_master(db, payload)
+        return CreateSuppressedVRMasterResponse(
+            record={
+                "id": result["record"].id,
+                "license_number": result["record"].license_number,
+                "vehicle_id_number": result["record"].vehicle_id_number,
+                "registered_owner": result["record"].registered_owner,
+                "is_suppressed": result["record"].is_suppressed,
+                "created_at": result["record"].created_at if hasattr(result["record"], 'created_at') else None
+            },
+            suppression={
+                "suppression_id": result["suppression"].id,
+                "record_type": result["suppression"].record_type,
+                "record_id": result["suppression"].record_id,
+                "reason": result["suppression"].reason,
+                "status": result["suppression"].status,
+                "suppressed_at": result["suppression"].suppressed_at
+            },
+            message="VRMaster created and suppressed successfully"
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error creating suppressed VRMaster: {str(e)}"
+        )
+
+
+@router.post(
+    "/create-suppressed/dl-original",
+    response_model=CreateSuppressedDLOriginalResponse,
+    status_code=201
+)
+async def create_suppressed_dl_original_endpoint(
+    payload: CreateSuppressedDLOriginalRequest,
+    db: Session = Depends(get_db)
+):
+    try:
+        result = create_suppressed_dl_original(db, payload)
+        return CreateSuppressedDLOriginalResponse(
+            record={
+                "id": result["record"].id,
+                "fdl": result["record"].fdl,
+                "fln": result["record"].fln,
+                "ffn": result["record"].ffn,
+                "is_suppressed": result["record"].is_suppressed,
+                "created_at": result["record"].created_at if hasattr(result["record"], 'created_at') else None
+            },
+            suppression={
+                "suppression_id": result["suppression"].id,
+                "record_type": result["suppression"].record_type,
+                "record_id": result["suppression"].record_id,
+                "reason": result["suppression"].reason,
+                "status": result["suppression"].status,
+                "suppressed_at": result["suppression"].suppressed_at
+            },
+            message="DriverLicense created and suppressed successfully"
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error creating suppressed DriverLicense: {str(e)}"
         )

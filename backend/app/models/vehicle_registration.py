@@ -126,7 +126,7 @@ class VehicleRegistrationFictitious(BaseModel):
     id = Column(Integer, primary_key=True, index=True)
     master_record_id = Column(Integer, ForeignKey("vehicle_registration_master.id"), nullable=True)
     
-    license_number = Column(String(20), index=True, nullable=False)
+    license_number = Column(String(9), index=True, nullable=False)
     vehicle_id_number = Column(String(17), index=True)
     registered_owner = Column(String(200), nullable=False)
  
