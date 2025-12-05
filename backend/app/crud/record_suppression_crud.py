@@ -6,8 +6,6 @@ from typing import Optional
 
 from app.models.record_suppression import RecordSuppressionRequest
 from app.schemas.record_suppression_schema import (
-    CreateSuppressedDLOriginalRequest,
-    CreateSuppressedVRMasterRequest,
     SuppressRecordRequest,
     RevokeSuppressionRequest,
     SuppressionHistoryResponse,
@@ -220,7 +218,7 @@ def _get_record_by_type(db: Session, record_type: str, record_id: int):
 
 def create_suppressed_vr_master(
     db: Session,
-    payload: CreateSuppressedVRMasterRequest
+    payload: MasterCreateRequest
 ):
     
     suppression_reason = payload.suppression_reason
@@ -296,7 +294,7 @@ def create_suppressed_vr_master(
 
 def create_suppressed_dl_original(
     db: Session,
-    payload: CreateSuppressedDLOriginalRequest
+    payload: DriverLicenseCreateRequest
 ):
     
     suppression_reason = payload.suppression_reason

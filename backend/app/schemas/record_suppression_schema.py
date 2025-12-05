@@ -3,6 +3,9 @@ from datetime import date, datetime
 from typing import Optional, List
 from decimal import Decimal
 
+from app.schemas.vehicle_registration_schema import MasterCreateRequest
+from app.schemas.driving_license_schema import DriverLicenseOriginalCreate
+
 
 class SuppressRecordRequest(BaseModel):
     reason: str = Field(..., min_length=2)
@@ -97,38 +100,8 @@ class RevokeSuccessResponse(BaseModel):
         from_attributes = True
 
 
-class CreateSuppressedVRMasterRequest(BaseModel):
-    license_number: str
-    vehicle_id_number: str
-    registered_owner: str
-    address: str
-    city: str
-    state: str = "California"
-    zip_code: str
-    make: str
-    model: str
-    year_model: int
-    body_type: Optional[str] = None
-    type_license: Optional[str] = None
-    type_vehicle: Optional[str] = None
-    category: Optional[str] = None
-    expiration_date: Optional[date] = None
-    date_issued: Optional[date] = None
-    date_received: Optional[date] = None
-    date_fee_received: Optional[date] = None
-    amount_paid: Optional[Decimal] = None
-    amount_due: Optional[Decimal] = None
-    amount_received: Optional[Decimal] = None
-    use_tax: Optional[Decimal] = None
-    sticker_issued: Optional[str] = None
-    sticker_numbers: Optional[str] = None
-    cert_type: Optional[str] = None
-    mp: Optional[str] = None
-    mo: Optional[str] = None
-    axl: Optional[str] = None
-    wc: Optional[str] = None
-    cc_alco: Optional[str] = None
-    active_status: Optional[bool] = True
+class CreateSuppressedVRMasterRequest(MasterCreateRequest):
+
     suppression_reason: Optional[str] = None
 
     class Config:
@@ -144,19 +117,8 @@ class CreateSuppressedVRMasterResponse(BaseModel):
         from_attributes = True
 
 
-class CreateSuppressedDLOriginalRequest(BaseModel):
-    tln: str
-    tfn: str
-    tdl: str
-    fln: str
-    ffn: str
-    fdl: str
-    agency: Optional[str] = None
-    contact: Optional[str] = None
-    date_issued: Optional[date] = None
-    modified: Optional[datetime] = None
-    approval_status: Optional[str] = "pending"
-    active_status: Optional[bool] = True
+class CreateSuppressedDLOriginalRequest(DriverLicenseOriginalCreate):
+    
     suppression_reason: Optional[str] = None
 
     class Config:

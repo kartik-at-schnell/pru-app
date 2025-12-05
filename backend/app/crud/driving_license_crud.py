@@ -155,6 +155,8 @@ def get_all_records(
     
     # order by most recent
     query = query.order_by(DriverLicenseOriginalRecord.created_at.desc())
+
+    query = query.filter(DriverLicenseOriginalRecord.is_suppressed == False)
     
     records = query.offset(skip).limit(limit).all()
     

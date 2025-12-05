@@ -20,6 +20,7 @@ class DriverLicenseOriginalRecord(BaseModel):
     date_issued = Column(Date)
     modified = Column(DateTime(timezone=True))
     approval_status = Column(String(50), default="pending")
+    is_suppressed = Column(Boolean, default=False, index=True)
 
     # relationship
     contacts = relationship("DriverLicenseContact", back_populates="original_record")
