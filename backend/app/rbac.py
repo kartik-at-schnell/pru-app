@@ -32,7 +32,8 @@ class PermissionChecker:
         if not has_perm:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Operation not permitted: Requires '{self.permission_name}' permission"
+               # detail=f"Operation not permitted: missing permission '{self.permission_name}   
+               detail=f"Operation not permitted"
             )
         
         return current_user
@@ -56,7 +57,8 @@ class RoleChecker:
         if not has_role:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Operation not permitted: have roles: {', '.join(self.allowed_roles)}"
+               # detail=f"Operation not permitted: have roles: {', '.join(self.allowed_roles)}"
+                detail=f"Operation not permitted"
             )
         
         return current_user

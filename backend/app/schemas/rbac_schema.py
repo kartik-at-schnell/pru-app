@@ -43,8 +43,7 @@ class Role(RoleBase):
     class Config:
         from_attributes = True
 
-class UserRoleAssignment(BaseModel):
-    role_ids: List[int]
+
 
 class UserRoleAssignmentByEmail(BaseModel):
     email: str

@@ -133,7 +133,7 @@ def list_vehicles(
     approval_status: Optional[str] = Query(None, description="pending, approved, rejected, on_hold"),
     db: Session = Depends(get_db),
     # current_user: user_models.User = Depends(get_current_user)
-    current_user: user_models.User = Depends(RoleChecker("Admin","Supervisor / Manager","User")),
+    current_user: user_models.User = Depends(RoleChecker("Admin","Supervisor / Manager")),
     permission_check = Depends(PermissionChecker("view_vr_records")),
     
 ):

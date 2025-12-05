@@ -80,31 +80,7 @@ def create_permission(perm_in: rbac_schema.PermissionCreate, db: Session = Depen
 
 # --- User Roles ---
 
-@router.post("/users/{user_id}/roles")
-def assign_roles_to_user(
-    user_id: int, 
-    role_assignment: rbac_schema.UserRoleAssignment, 
-    db: Session = Depends(get_db)
-):
-    # Fetch user
-    user = db.query(user_models.User).filter(user_models.User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-        
-    # Fetch roles
-    roles = db.query(user_models.Role).filter(user_models.Role.id.in_(role_assignment.role_ids)).all()
-    
-    # Validate that all role IDs were found
-    if len(roles) != len(role_assignment.role_ids):
-        found_ids = [role.id for role in roles]
-        missing_ids = set(role_assignment.role_ids) - set(found_ids)
-        raise HTTPException(status_code=400, detail=f"Roles not found: {missing_ids}")
-        
-    # Assign roles (replace existing)
-    user.roles = roles
-    db.commit()
-    
-    return {"message": "Roles assigned successfully", "user_id": user_id, "role_ids": [r.id for r in user.roles]}
+
 
 @router.post("/users/roles/by-email")
 def assign_roles_to_user_by_email(
