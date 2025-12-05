@@ -1,37 +1,27 @@
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional, List
 from decimal import Decimal
 
+from app.schemas.vehicle_registration_schema import MasterCreateRequest
+from app.schemas.driving_license_schema import DriverLicenseOriginalCreate
+
 
 class SuppressRecordRequest(BaseModel):
-    """Request to suppress a record"""
-    record_type: str = Field(..., description="Type of record: vr_master, vr_undercover, vr_fictitious, dl_original")
-    record_id: int = Field(..., description="ID of the record to suppress")
-    reason: str = Field(..., min_length=5, description="Reason for suppression")
+    reason: str = Field(..., min_length=2)
 
     class Config:
         from_attributes = True
-        examples = {
-            "record_type": "vr_master",
-            "record_id": 123,
-            "reason": "Undercover operation - high priority"
-        }
 
 
 class RevokeSuppressionRequest(BaseModel):
-    """Request to revoke (unsuppress) a suppression"""
-    revoke_reason: str = Field(..., min_length=5, description="Reason for revoking suppression")
+    revoke_reason: str = Field(..., min_length=5)
 
     class Config:
         from_attributes = True
-        examples = {
-            "revoke_reason": "Case closed - suspect captured"
-        }
 
 
 class RecordSuppressionResponse(BaseModel):
-    """Response for a single suppression entry"""
     id: int
     record_type: str
     record_id: int
@@ -45,8 +35,18 @@ class RecordSuppressionResponse(BaseModel):
         from_attributes = True
 
 
+class CheckSuppressionResponse(BaseModel):
+    is_suppressed: bool
+    suppression_id: Optional[int] = None
+    reason: Optional[str] = None
+    suppressed_at: Optional[datetime] = None
+    status: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class SuppressionHistoryResponse(BaseModel):
-    """Complete suppression history for a record"""
     record_type: str
     record_id: int
     total_entries: int
@@ -57,7 +57,6 @@ class SuppressionHistoryResponse(BaseModel):
 
 
 class ActiveSuppressionListResponse(BaseModel):
-    """List of currently active (non-revoked) suppressions"""
     suppression_id: int
     record_type: str
     record_id: int
@@ -70,7 +69,6 @@ class ActiveSuppressionListResponse(BaseModel):
 
 
 class ActiveSuppressionsListAllResponse(BaseModel):
-    """Response for listing all active suppressions"""
     total_active: int
     suppressions: List[ActiveSuppressionListResponse]
 
@@ -79,7 +77,6 @@ class ActiveSuppressionsListAllResponse(BaseModel):
 
 
 class SuppressSuccessResponse(BaseModel):
-    """Response when suppression is successful"""
     suppression_id: int
     record_type: str
     record_id: int
@@ -92,23 +89,46 @@ class SuppressSuccessResponse(BaseModel):
 
 
 class RevokeSuccessResponse(BaseModel):
-    """Response when revocation is successful"""
     suppression_id: int
     record_type: str
     record_id: int
     status: str
     revoked_at: datetime
-    message: str = "Suppression revoked - record now visible"
+    message: str = "Suppression revoked successfully"
 
     class Config:
         from_attributes = True
 
 
-class ErrorResponse(BaseModel):
-    """Standard error response"""
-    detail: str
-    status_code: int
-    error_type: str
+class CreateSuppressedVRMasterRequest(MasterCreateRequest):
+
+    suppression_reason: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CreateSuppressedVRMasterResponse(BaseModel):
+    record: dict
+    suppression: dict
+    message: str = "VRMaster created and suppressed successfully"
+
+    class Config:
+        from_attributes = True
+
+
+class CreateSuppressedDLOriginalRequest(DriverLicenseOriginalCreate):
+    
+    suppression_reason: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CreateSuppressedDLOriginalResponse(BaseModel):
+    record: dict
+    suppression: dict
+    message: str = "DriverLicense created and suppressed successfully"
 
     class Config:
         from_attributes = True

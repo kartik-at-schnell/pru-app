@@ -155,6 +155,8 @@ def get_all_records(
     
     # order by most recent
     query = query.order_by(DriverLicenseOriginalRecord.created_at.desc())
+
+    query = query.filter(DriverLicenseOriginalRecord.is_suppressed == False)
     
     records = query.offset(skip).limit(limit).all()
     
@@ -189,7 +191,6 @@ def get_record_by_tln(db: Session, tln: str):
 
 
 def get_record_by_tdl(db: Session, tdl: str):
-    """Get a driver license record by True Driver License"""
     
     record = db.query(DriverLicenseOriginalRecord).filter(
         DriverLicenseOriginalRecord.tdl == tdl
