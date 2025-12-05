@@ -51,7 +51,7 @@ def register_new_user(
     new_user = user_crud.create_user(db=db, user=user_in)
     return new_user
 
-@router.get("/me", response_model=user_schema.UserWithPermissions)
+@router.get("/getUserRoleandPermission_byemail", response_model=user_schema.UserWithPermissions)
 def get_current_user_profile(
     email: str | None = None,
     current_user = Depends(get_current_user),
