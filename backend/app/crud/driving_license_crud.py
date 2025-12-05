@@ -191,7 +191,6 @@ def get_record_by_tln(db: Session, tln: str):
 
 
 def get_record_by_tdl(db: Session, tdl: str):
-    """Get a driver license record by True Driver License"""
     
     record = db.query(DriverLicenseOriginalRecord).filter(
         DriverLicenseOriginalRecord.tdl == tdl

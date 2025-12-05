@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -26,6 +26,9 @@ from app.crud.record_suppression_crud import (
     create_suppressed_vr_master,
     create_suppressed_dl_original
 )
+from app.crud.vehicle_registration_crud import get_vehicle_master_details
+from app.models.record_suppression import RecordSuppressionRequest
+from app.security import get_current_user
 
 router = APIRouter(
     prefix="/record-suppression",
@@ -254,3 +257,40 @@ async def create_suppressed_dl_original_endpoint(
             status_code=500,
             detail=f"Error creating suppressed DriverLicense: {str(e)}"
         )
+    
+@router.get("/{suppression_id}/detailed")
+def open_suppressed_record(
+    suppression_id: int = Path(..., description="Suppression numeric id"),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    # 1) load suppression row
+    suppression = db.query(RecordSuppressionRequest).filter(
+        RecordSuppressionRequest.id == suppression_id
+    ).first()
+    if not suppression:
+        raise HTTPException(status_code=404, detail="Suppression not found")
+
+    record_type = (suppression.record_type or "").lower()
+    record_id = suppression.record_id
+
+    # 2) dispatch to the correct detail fetcher
+    if record_type == "vr_master":
+        # returns full master + nested lists (contacts, uc, fc)
+        record_detail = get_vehicle_master_details(db, master_id=record_id)
+    elif record_type in ("vr_undercover", "vr_fictitious"):
+        # you can call get_vehicle_master_details if you want parent + children,
+        # or call specific UC/FC detail endpoints if you need only child record
+        record_detail = db.query(...)  # or call your existing UC/FC getters
+    elif record_type == "dl_original":
+        record_detail = get_dl_detail(db, record_id=record_id)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported record_type {record_type}")
+
+    # 3) return combined payload (or redirect/url)
+    return {
+        "suppression": RecordSuppressionResponse.model_validate(suppression),
+        "record_type": record_type,
+        "record_id": record_id,
+        "record_detail": record_detail
+    }
