@@ -29,16 +29,16 @@ class DocumentLibrarySchema(BaseModel):
 class DocumentResponse(BaseModel):
     id: int
     document_name: str
-    document_type: str
+    document_type: Optional[str]
     document_size: Optional[float]
-    document_url: str
-    status: str
-    content_type: str
+    document_url: Optional[str]
+    status: Optional[str]
+    content_type: Optional[str]
     abbyy_batch_id: Optional[str]
     created_at: Optional[datetime]
     master_record_id: Optional[int]
     ocr_response_json: Optional[dict]
-    is_archived: bool
+    is_archived: Optional[bool]
 
     class Config:
         from_attributes = True
