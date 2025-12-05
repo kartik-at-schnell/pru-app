@@ -163,7 +163,7 @@ def update_vehicle(
     db: Session = Depends(get_db),
     #current_user: user_models.User = Depends(get_current_user)
     current_user: user_models.User = Depends(RoleChecker("Admin","Supervisor / Manager","User")),
-    permission_check = Depends(PermissionChecker("view_vr_records" )),
+    permission_check = Depends(PermissionChecker("Edit VR Record" )),
 ):
     updated = update_vehicle_record(db, record_id, update_data)
     if not updated:
