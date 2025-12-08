@@ -32,20 +32,15 @@ def create_user(db: Session, user: user_schema.UserCreate) -> models.User:
         pattern = mapping.email_pattern
         # Handle exact match
         if pattern == user.email:
-            assigned_role = mapping.role
-            break
+            db_user.roles.append(mapping.role)
         # Handle simple suffix matching (e.g., "%@admin.com")
         elif pattern.startswith("%"):
             suffix = pattern[1:]
             if user.email.lower().endswith(suffix.lower()):
-                assigned_role = mapping.role
-                break
-        # Can add more complex pattern matching if needed
+                db_user.roles.append(mapping.role)
     
-    if assigned_role:
-        db_user.roles.append(assigned_role)
-    else:
-        # Default to 'User' role if no mapping found
+    # Default to 'User' role if no roles assigned
+    if not db_user.roles:
         default_role = db.query(models.Role).filter(models.Role.name == "User").first()
         if default_role:
             db_user.roles.append(default_role)

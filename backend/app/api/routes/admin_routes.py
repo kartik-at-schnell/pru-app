@@ -89,8 +89,6 @@ def assign_roles_to_user_by_email(
 ):
     # Fetch user by email
     user = db.query(user_models.User).filter(user_models.User.email == assignment.email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail=f"User with email {assignment.email} not found")
 
     # Fetch roles
     roles = db.query(user_models.Role).filter(user_models.Role.id.in_(assignment.role_ids)).all()
@@ -101,8 +99,26 @@ def assign_roles_to_user_by_email(
         missing_ids = set(assignment.role_ids) - set(found_ids)
         raise HTTPException(status_code=400, detail=f"Roles not found: {missing_ids}")
         
-    # Assign roles (replace existing)
-    user.roles = roles
-    db.commit()
-    
-    return {"message": f"Roles assigned successfully to {user.email}", "user_email": user.email, "role_ids": [r.id for r in user.roles]}
+    if user:
+        # User exists, assign roles directly (replace existing)
+        user.roles = roles
+        db.commit()
+        return {"message": "Permission granted", "user_email": user.email, "role_ids": [r.id for r in user.roles]}
+    else:
+        # User does not exist, create email role mappings
+        # First, remove any existing mappings for this specific email to avoid duplicates/stale data
+        db.query(user_models.EmailRoleMapping).filter(user_models.EmailRoleMapping.email_pattern == assignment.email).delete()
+        
+        # Create new mappings
+        new_mappings = []
+        for role in roles:
+            mapping = user_models.EmailRoleMapping(
+                email_pattern=assignment.email,
+                role_id=role.id,
+                description=f"Pre-assigned role for {assignment.email}"
+            )
+            db.add(mapping)
+            new_mappings.append(mapping)
+            
+        db.commit()
+        return {"message": "Permission granted", "user_email": assignment.email, "role_ids": [r.role_id for r in new_mappings]}

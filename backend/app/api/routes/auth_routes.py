@@ -11,6 +11,8 @@ from app.security import (
     get_current_user
 )
 # from app.utils.hash_password import verify_password, hash_password
+from datetime import datetime, timedelta
+from app.models import user_models
 from app.schemas import user_schema
 
 router = APIRouter(tags=["Authentication"])
@@ -69,10 +71,31 @@ def get_current_user_profile(
         if user_by_email:
             target_user = user_by_email
         else:
-             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User with email {email} not found"
-            )
+            # Check for pre-assigned roles in EmailRoleMapping
+            mappings = db.query(user_models.EmailRoleMapping).filter(
+                user_models.EmailRoleMapping.email_pattern == email
+            ).all()
+            
+            if mappings:
+                # Create a "virtual" user object for the schema response
+                class VirtualUser:
+                    def __init__(self, email, roles):
+                        self.id = 0
+                        self.email = email
+                        self.first_name = "Pre-assigned"
+                        self.middle_name = None
+                        self.last_name = None
+                        self.is_active = True
+                        self.created_at = datetime.now()
+                        self.roles = roles
+
+                virtual_roles = [m.role for m in mappings]
+                target_user = VirtualUser(email=email, roles=virtual_roles)
+            else:
+                 raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"User with email {email} not found"
+                )
 
     # Group permissions by module
     permissions_by_module = {}

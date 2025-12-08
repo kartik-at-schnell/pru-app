@@ -29,6 +29,7 @@ from app.crud.record_suppression_crud import (
 from app.crud.vehicle_registration_crud import get_vehicle_master_details
 from app.models.record_suppression import RecordSuppressionRequest
 from app.security import get_current_user
+from app.crud.action_crud import get_record_by_id
 
 router = APIRouter(
     prefix="/record-suppression",
@@ -274,16 +275,16 @@ def open_suppressed_record(
     record_type = (suppression.record_type or "").lower()
     record_id = suppression.record_id
 
-    # 2) dispatch to the correct detail fetcher
+
     if record_type == "vr_master":
-        # returns full master + nested lists (contacts, uc, fc)
         record_detail = get_vehicle_master_details(db, master_id=record_id)
+
     elif record_type in ("vr_undercover", "vr_fictitious"):
-        # you can call get_vehicle_master_details if you want parent + children,
-        # or call specific UC/FC detail endpoints if you need only child record
-        record_detail = db.query(...)  # or call your existing UC/FC getters
+        record_detail = db.query(...)
+
     elif record_type == "dl_original":
-        record_detail = get_dl_detail(db, record_id=record_id)
+        record_detail = get_record_by_id(db, record_id=record_id)
+
     else:
         raise HTTPException(status_code=400, detail=f"Unsupported record_type {record_type}")
 
