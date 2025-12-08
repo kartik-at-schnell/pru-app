@@ -68,6 +68,7 @@ from app.schemas.base_schema import ApiResponse
 from app.models import user_models
 from app.crud.driving_license_crud import delete_contact, update_contact
 from app.rbac import PermissionChecker, RoleChecker
+from app.utils.logging_utils import log_error
 
 router = APIRouter(prefix="/vehicle-registration", tags=["Vehicle Registration"])
     
@@ -114,6 +115,7 @@ def create_vehicle_record(
                 data=data
             )
     except Exception as e:
+        log_error(db, e, __name__, "create_vehicle_record", user_id=str(current_user.id) if current_user else None, data=str(payload.dict()))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create record: {str(e)}"
@@ -152,6 +154,7 @@ def list_vehicles(
 
         return ApiResponse(data=data)
     except Exception as e:
+        log_error(db, e, __name__, "list_vehicles", user_id=str(current_user.id) if current_user else None, data=f"skip={skip}, limit={limit}, search={search}, type={record_type}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve records: {e}")
 
 

@@ -15,6 +15,7 @@ from .user_models import user_roles_table, User, Role, EmailRoleMapping, Module,
 from .document_library import DocumentLibrary, DocumentAuditLog
 
 from .driving_license import (DriverLicenseOriginalRecord, DriverLicenseContact, DriverLicenseFictitiousTrap)
+from .system_logs import SystemLog
 
 # export all models for easy importing
 __all__ = [
@@ -40,5 +41,6 @@ __all__ = [
     "DocumentAuditLog",
     "DriverLicenseOriginalRecord",
     "DriverLicenseContact",
-    "DriverLicenseFictitiousTrap"
+    "DriverLicenseFictitiousTrap",
+    "SystemLog"
 ]
