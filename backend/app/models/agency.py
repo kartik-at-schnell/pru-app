@@ -13,7 +13,7 @@ class Agency(BaseModel):
     agency_name = Column(String(100), nullable=False, unique=True, index=True)
     agency_code = Column(String(50), nullable=True, unique=True, index=True)
     agency_type_id = Column(Integer, ForeignKey("agency_type.id"), nullable=False, index=True)
-    #order_value = Column(Integer, nullable=False, default=0, index=True)
+    order_value = Column(Integer, nullable=False, default=0, index=True)
     status = Column(String(20), nullable=False, default="Active")
     #description = Column(Text, nullable=True)
     #contact_email = Column(String(100), nullable=True)

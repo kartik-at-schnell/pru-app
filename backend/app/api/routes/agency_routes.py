@@ -32,7 +32,7 @@ def list_agencies(
     db: Session = Depends(get_db)
 ):
     agencies_list = crud.list_agencies(
-        db, search=search, agency_type_id=agency_type_id, status=status, skip=skip, limit=limit
+        db, search=search, agency_type_id=agency_type_id, status=status
     )
     return ApiResponse(status="success", data=agencies_list)
 
@@ -83,7 +83,7 @@ def create_type(payload: AgencyTypeCreate, db: Session = Depends(get_db), curren
 
 @router.get("/types", response_model=ApiResponse[List[AgencyTypeResponse]])
 def list_types(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    agency_types = crud.list_agency_types(db, skip=skip, limit=limit)
+    agency_types = crud.list_agency_types(db, '''skip=skip, limit=limit''')
     return ApiResponse(status="success", data=agency_types)
 
 
