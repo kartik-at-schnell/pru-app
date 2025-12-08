@@ -7,9 +7,12 @@ from app.database import get_db
 from app.crud import user_crud
 from app.security import (
     create_access_token,
-    ACCESS_TOKEN_EXPIRE_MINUTES
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    get_current_user
 )
 # from app.utils.hash_password import verify_password, hash_password
+from datetime import datetime, timedelta
+from app.models import user_models
 from app.schemas import user_schema
 
 router = APIRouter(tags=["Authentication"])
@@ -49,3 +52,70 @@ def register_new_user(
         )
     new_user = user_crud.create_user(db=db, user=user_in)
     return new_user
+
+@router.get("/getUserRoleandPermission_byemail", response_model=user_schema.UserWithPermissions)
+def get_current_user_profile(
+    email: str | None = None,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Fetches the currently logged-in user's profile, 
+    including a flattened list of all their permissions.
+    Optionally accepts an email to fetch a specific user's profile (Admin use case).
+    """
+    target_user = current_user
+    if email:
+        # TODO: Add check if current_user is Admin before allowing this
+        user_by_email = user_crud.get_user_by_email(db, email=email)
+        if user_by_email:
+            target_user = user_by_email
+        else:
+            # Check for pre-assigned roles in EmailRoleMapping
+            mappings = db.query(user_models.EmailRoleMapping).filter(
+                user_models.EmailRoleMapping.email_pattern == email
+            ).all()
+            
+            if mappings:
+                # Create a "virtual" user object for the schema response
+                class VirtualUser:
+                    def __init__(self, email, roles):
+                        self.id = 0
+                        self.email = email
+                        self.first_name = "Pre-assigned"
+                        self.middle_name = None
+                        self.last_name = None
+                        self.is_active = True
+                        self.created_at = datetime.now()
+                        self.roles = roles
+
+                virtual_roles = [m.role for m in mappings]
+                target_user = VirtualUser(email=email, roles=virtual_roles)
+            else:
+                 raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"User with email {email} not found"
+                )
+
+    # Group permissions by module
+    permissions_by_module = {}
+    
+    for role in target_user.roles:
+        for perm in role.permissions:
+            module_name = perm.module.name if perm.module else "Other"
+            if module_name not in permissions_by_module:
+                permissions_by_module[module_name] = set()
+            permissions_by_module[module_name].add(perm.permission_name)
+            
+    # Convert to list of ModulePermissions
+    module_permissions_list = []
+    for module, slugs in permissions_by_module.items():
+        module_permissions_list.append(
+            user_schema.ModulePermissions(module=module, permissions=list(slugs))
+        )
+
+    # Create response object
+    user_response = user_schema.UserWithPermissions.model_validate(target_user)
+    user_response.permissions = module_permissions_list
+    
+    return user_response
