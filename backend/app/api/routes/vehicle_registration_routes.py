@@ -80,7 +80,7 @@ router = APIRouter(prefix="/vehicle-registration", tags=["Vehicle Registration"]
 def create_vehicle_record(
     record_type: str = Query(..., regex="^(master|undercover|fictitious)$"),
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(RoleChecker("Admin","Supervisor / Manager","User")),
+    current_user: user_models.User = Depends(RoleChecker("Admin","Supervisor / Manager")),
     permission_check = Depends(PermissionChecker("create_new_vr")),
     payload: Union[
         MasterCreateRequest,
@@ -339,7 +339,9 @@ def update_vehicle_contact(
 def delete_vehicle_contact(
     contact_id: int,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    #current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin","Supervisor / Manager")),
+    permission_check = Depends(PermissionChecker("delete_vr_record")),
 ):
     try:
 
