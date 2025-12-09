@@ -59,7 +59,7 @@ def list_agencies(
     if status:
         q = q.filter(Agency.status == status)
     q = q.order_by(Agency.agency_name.asc())
-    return q.offset(skip).limit(limit).all()
+    #return q.offset(skip).limit(limit).all()
 
 def update_agency(db: Session, agency_id: int, payload: AgencyUpdate) -> Agency:
     a = get_agency(db, agency_id)
@@ -112,7 +112,8 @@ def create_agency_type(db: Session, payload: AgencyTypeCreate) -> AgencyType:
     return at
 
 def list_agency_types(db: Session, skip: int = 0, limit: int = 100) -> List[AgencyType]:
-    return db.query(AgencyType).order_by(AgencyType.type_name.asc()).offset(skip).limit(limit).all()
+    return db.query(AgencyType).order_by(AgencyType.type_name.asc())
+    #.offset(skip).limit(limit).all()
 
 def get_agency_type(db: Session, type_id: int) -> AgencyType:
     at = db.query(AgencyType).filter(AgencyType.id == type_id).first()
