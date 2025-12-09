@@ -15,6 +15,7 @@ from app.api.routes import driving_license_routes
 from app.security import get_current_user
 from app.api.routes import record_suppression_routes
 from app.api.routes import admin_routes
+from app.api.routes import agency_routes
 from app.models import user_models
 
 
@@ -54,6 +55,7 @@ router.include_router(driving_license_routes.router)
 router.include_router(action_routes.router)
 router.include_router(dashboard_routes.router)
 router.include_router(record_suppression_routes.router)
+router.include_router(agency_routes.router)
 
 app.include_router(router)
 
