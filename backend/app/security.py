@@ -81,15 +81,12 @@ async def get_current_user(
     # Token is completely ignored as per request.
     if email:
         target_email = email
-    else:
-        # Email parameter is mandatory now
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email parameter is required for authentication",
-        )
+    # Removed mandatory email check to allow anonymous/default user role
 
     # 3. Check if User exists in DB
-    user = user_crud.get_user_by_email(db, email=target_email)
+    user = None
+    if target_email:
+        user = user_crud.get_user_by_email(db, email=target_email)
     
     if user:
         if not user.is_active:
@@ -101,7 +98,7 @@ async def get_current_user(
     # Create a transient User object (not saved to DB yet)
     # We use the target_email and set is_active=True for now (or strictly control this)
     transient_user = user_models.User(
-        email=target_email,
+        email=target_email or "anonymous@user",
         is_active=True, 
         roles=[]
     )
@@ -111,18 +108,19 @@ async def get_current_user(
     mappings = db.query(EmailRoleMapping).all()
     mapping_found = False
 
-    for mapping in mappings:
-        pattern = mapping.email_pattern
-        # Exact match
-        if pattern == target_email:
-            transient_user.roles.append(mapping.role)
-            mapping_found = True
-        # Suffix match (e.g. "%@admin.com")
-        elif pattern.startswith("%"):
-            suffix = pattern[1:]
-            if target_email.lower().endswith(suffix.lower()):
+    if target_email:
+        for mapping in mappings:
+            pattern = mapping.email_pattern
+            # Exact match
+            if pattern == target_email:
                 transient_user.roles.append(mapping.role)
                 mapping_found = True
+            # Suffix match (e.g. "%@admin.com")
+            elif pattern.startswith("%"):
+                suffix = pattern[1:]
+                if target_email.lower().endswith(suffix.lower()):
+                    transient_user.roles.append(mapping.role)
+                    mapping_found = True
     
     # 6. If NO mapping found, assign default "User" role
     if not mapping_found:
