@@ -3,7 +3,7 @@ import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from dotenv import load_dotenv
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.crud import user_crud
 from app.models import user_models
-from app.models.user_models import Role
+from app.models.user_models import Role, EmailRoleMapping
 
 load_dotenv()
 
@@ -20,7 +20,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1080 #mins
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 # pre hashing with SHA256 then bcrypt
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -65,7 +65,8 @@ def decode_access_token(token: str) -> Optional[str]:
     return email
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    token: Optional[str] = Depends(oauth2_scheme),
+    email: Optional[str] = Query(None), # Optional email query param
     db: Session = Depends(get_db) #injecting the db session
 ) -> user_models.User:
     credentials_exception = HTTPException(
@@ -73,21 +74,63 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    email = decode_access_token(token)
-    if email is None:
-        #token decoding failed or email wasnt found in token
-        raise credentials_exception
+    
+    target_email = None
 
-    user = user_crud.get_user_by_email(db, email=email)
-    if user is None:
-        #no user matches the email from the token
-        raise credentials_exception
-    if not user.is_active:
-        #deny access to inactive users
-        raise HTTPException(status_code=400, detail="Inactive user")
+    # Priority: Email Query Param ONLY
+    # Token is completely ignored as per request.
+    if email:
+        target_email = email
+    else:
+        # Email parameter is mandatory now
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email parameter is required for authentication",
+        )
 
-    #return the SQLAlchemy user obj
-    return user
+    # 3. Check if User exists in DB
+    user = user_crud.get_user_by_email(db, email=target_email)
+    
+    if user:
+        if not user.is_active:
+             raise HTTPException(status_code=400, detail="Inactive user")
+        return user
+
+    # 4. User NOT found in DB -> Fallback Logic (Virtual/Transient User)
+    
+    # Create a transient User object (not saved to DB yet)
+    # We use the target_email and set is_active=True for now (or strictly control this)
+    transient_user = user_models.User(
+        email=target_email,
+        is_active=True, 
+        roles=[]
+    )
+
+    # 5. Check EmailRoleMapping
+    # We look for a mapping that matches the target_email
+    mappings = db.query(EmailRoleMapping).all()
+    mapping_found = False
+
+    for mapping in mappings:
+        pattern = mapping.email_pattern
+        # Exact match
+        if pattern == target_email:
+            transient_user.roles.append(mapping.role)
+            mapping_found = True
+        # Suffix match (e.g. "%@admin.com")
+        elif pattern.startswith("%"):
+            suffix = pattern[1:]
+            if target_email.lower().endswith(suffix.lower()):
+                transient_user.roles.append(mapping.role)
+                mapping_found = True
+    
+    # 6. If NO mapping found, assign default "User" role
+    if not mapping_found:
+        default_role = db.query(Role).filter(Role.name == "User").first()
+        if default_role:
+            transient_user.roles.append(default_role)
+    
+    return transient_user
 
 # func for RBAC
 async def get_current_admin_user(
