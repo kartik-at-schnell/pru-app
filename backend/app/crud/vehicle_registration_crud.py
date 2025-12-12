@@ -93,7 +93,8 @@ def create_undercover_record(db, payload: UnderCoverCreateRequest):
         date_issued=payload.date_issued,
         date_fee_received=payload.date_fee_received,
         amount_paid=payload.amount_paid,
-        active_status=payload.active_status
+        active_status=payload.active_status,
+        officer=payload.officer
     )
     db.add(record)
     db.commit()
@@ -124,7 +125,8 @@ def create_fictitious_record(db, payload: FictitiousCreateRequest):
         vlp_class=payload.vlp_class,
         amount_due=payload.amount_due,
         amount_received=payload.amount_received,
-        active_status=payload.active_status
+        active_status=payload.active_status,
+        officer=payload.officer
     )
     db.add(record)
     db.commit()
@@ -497,7 +499,8 @@ def create_reciprocal_issued(db: Session, payload: VehicleRegistrationReciprocal
         year_of_renewal=payload.year_of_renewal,
         cancellation_date=payload.cancellation_date,
         sticker_number=payload.sticker_number,
-        issuing_authority=payload.issuing_authority
+        issuing_authority=payload.issuing_authority,
+        agreement_issued_id=payload.agreement_issued_id
     )
     
     db.add(reciprocal)

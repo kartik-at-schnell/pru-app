@@ -34,6 +34,7 @@ class VehicleRegistrationReciprocalIssued(BaseModel):
     cancellation_date: Optional[date] = None
     sticker_number: Optional[str] = None
     issuing_authority: Optional[str] = None
+    agreement_issued_id: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -199,6 +200,7 @@ class VehicleRegistrationUnderCoverCreateBody(BaseModel):
     vehicle_id_number: Optional[str]
     registered_owner: Optional[str]
     status: Optional[str] = "Pending"
+    officer: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -233,6 +235,8 @@ class VehicleRegistrationReciprocalIssuedCreateBody(BaseModel):
     cancellation_date: Optional[date] = None
     sticker_number: Optional[str] = None
     issuing_authority: Optional[str] = None
+    agreement_issued_id: Optional[str] = None
+
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -315,6 +319,7 @@ class UnderCoverCreateRequest(BaseVehicleRegistrationCreate):
     date_issued: Optional[date] = None
     date_fee_received: Optional[date] = func.now()
     amount_paid: Optional[float] = None
+    officer: Optional[str] = None
 
 class FictitiousCreateRequest(BaseVehicleRegistrationCreate):
     master_record_id: int
@@ -326,6 +331,8 @@ class FictitiousCreateRequest(BaseVehicleRegistrationCreate):
     expiration_date: Optional[date] = None
     date_fee_received: Optional[date] = func.now()
     amount_paid: Optional[float] = None
+    officer: Optional[str] = None
+
 
 
 class MasterDropdownResponse(BaseModel):
@@ -402,6 +409,7 @@ class VehicleRegistrationMasterResponse(VehicleRegistrationResponse):
 class VehicleRegistrationUnderCoverResponse(VehicleRegistrationResponse):
     list: str = Field(default="Undercover Record")
     master_record_id : Optional[int] = None
+    officer: Optional[str] = None
     active_status: Optional[bool]
     
     class Config:
@@ -412,6 +420,7 @@ class VehicleRegistrationUnderCoverResponse(VehicleRegistrationResponse):
 class VehicleRegistrationFictitiousResponse(VehicleRegistrationResponse):
     list: str = Field(default="Fictitious Record")
     master_record_id : Optional[int] = None
+    officer: Optional[str] = None
     active_status: Optional[bool]
     
     class Config:
