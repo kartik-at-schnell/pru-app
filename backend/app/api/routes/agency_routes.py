@@ -44,7 +44,7 @@ def list_agencies(
     agencies = crud.list_agencies(db, search=search, agency_type_id=agency_type_id, status=status, skip=skip, limit=limit)
     return ApiResponse(status="success", data=agencies)
 
-@router.get("/{agency_id}", response_model=ApiResponse[AgencyResponse])
+@router.get("/details/{agency_id}", response_model=ApiResponse[AgencyResponse])
 def get_agency(
     agency_id: int, 
     db: Session = Depends(get_db),
@@ -54,7 +54,7 @@ def get_agency(
     a = crud.get_agency(db, agency_id)
     return ApiResponse(status="success", data=a)
 
-@router.put("/{agency_id}", response_model=ApiResponse[AgencyResponse])
+@router.put("/details/{agency_id}", response_model=ApiResponse[AgencyResponse])
 def update_agency(
     agency_id: int, 
     payload: AgencyUpdate, 
@@ -66,7 +66,7 @@ def update_agency(
     updated = crud.update_agency(db, agency_id, payload)
     return ApiResponse(status="success", message=f"Agency {agency_id} updated", data=updated)
 
-@router.post("/{agency_id}/activate", response_model=ApiResponse[AgencyResponse])
+@router.post("/details/{agency_id}/activate", response_model=ApiResponse[AgencyResponse])
 def activate_agency(
     agency_id: int, 
     db: Session = Depends(get_db), 
@@ -76,7 +76,7 @@ def activate_agency(
     a = crud.activate_agency(db, agency_id)
     return ApiResponse(status="success", message="Agency activated", data=a)
 
-@router.post("/{agency_id}/deactivate", response_model=ApiResponse[AgencyResponse])
+@router.post("/details/{agency_id}/deactivate", response_model=ApiResponse[AgencyResponse])
 def deactivate_agency(
     agency_id: int, 
     db: Session = Depends(get_db), 
