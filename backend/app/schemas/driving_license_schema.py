@@ -73,6 +73,16 @@ class DriverLicenseFictitiousTrapBase(BaseModel):
     app_modified_by: Optional[str] = None
 
 
+class DriverLicenseFictitiousBase(BaseModel):
+    fake_first_name: Optional[str] = None
+    fake_last_name: Optional[str] = None
+    fake_license_number: Optional[str] = None
+    agency: Optional[str] = None
+    contact_details: Optional[str] = None
+    date_issued: Optional[date] = None
+    approval_status: Optional[str] = "pending"
+
+
 # CREATE Schemas
 
 class DriverLicenseOriginalCreate(BaseModel):
@@ -104,6 +114,15 @@ class DriverLicenseFictitiousTrapCreate(DriverLicenseFictitiousTrapBase):
     pass
 
 
+class DriverLicenseFictitiousCreate(DriverLicenseFictitiousBase):
+    fake_first_name: str = Field(..., description="Fake First Name")
+    fake_last_name: str = Field(..., description="Fake Last Name")
+    fake_license_number: str = Field(..., description="Fake License Number")
+    agency: str = Field(..., description="Agency Name")
+    contact_details: str = Field(..., description="Contact Details")
+    date_issued: date = Field(..., description="Date Issued")
+
+
 # UPDATE SCHEMAS
 
 class DriverLicenseOriginalUpdate(BaseModel):
@@ -121,6 +140,10 @@ class DriverLicenseOriginalUpdate(BaseModel):
     approval_status: Optional[str] = None
 
 
+class DriverLicenseFictitiousUpdate(DriverLicenseFictitiousBase):
+    pass
+
+
 # RESPONSE SCHEMAS
 
 class DriverLicenseContactResponse(DriverLicenseContactBase):
@@ -134,7 +157,18 @@ class DriverLicenseContactResponse(DriverLicenseContactBase):
 
 class DriverLicenseFictitiousTrapResponse(DriverLicenseFictitiousTrapBase):
     id: int
-    original_record_id: Optional[int] = None
+    fictitious_record_id: Optional[int] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DriverLicenseFictitiousResponse(DriverLicenseFictitiousBase):
+    id: int
+    original_record_id: int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    traps: List[DriverLicenseFictitiousTrapResponse] = []
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -158,7 +192,7 @@ class DriverLicenseOriginalDetailResponse(DriverLicenseOriginalBase):
     
     # Relationships
     contacts: List[DriverLicenseContactResponse] = []
-    fictitious_traps: List[DriverLicenseFictitiousTrapResponse] = []
+    fictitious_records: List[DriverLicenseFictitiousResponse] = []
     
     model_config = ConfigDict(from_attributes=True)
 

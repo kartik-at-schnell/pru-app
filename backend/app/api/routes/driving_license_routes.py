@@ -15,7 +15,10 @@ from app.schemas.driving_license_schema import (
     DriverLicenseFictitiousTrapResponse,
     ApprovalStatusUpdate,
     DeleteResponse,
-    RecordsCountResponse
+    RecordsCountResponse,
+    DriverLicenseFictitiousCreate,
+    DriverLicenseFictitiousUpdate,
+    DriverLicenseFictitiousResponse
 )
 
 from app.schemas.base_schema import ApiResponse
@@ -244,26 +247,26 @@ def get_trap_by_id(
 
 # record-specific trap endpoints
 # create
-@router.post("/{record_id}/trap", response_model=DriverLicenseFictitiousTrapResponse)
+@router.post("/{fictitious_record_id}/trap", response_model=DriverLicenseFictitiousTrapResponse)
 def create_fictitious_trap(
-    record_id: int,
+    fictitious_record_id: int,
     payload: DriverLicenseFictitiousTrapCreate,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
     permission_check = Depends(PermissionChecker("edit_dl_record"))
 ):
-    trap = crud.create_fictitious_trap(db, record_id, payload)
+    trap = crud.create_fictitious_trap(db, fictitious_record_id, payload)
     return trap
 
 # get all
-@router.get("/{record_id}/traps", response_model=List[DriverLicenseFictitiousTrapResponse])
-def get_traps_by_record(
-    record_id: int,
+@router.get("/{fictitious_record_id}/traps", response_model=List[DriverLicenseFictitiousTrapResponse])
+def get_traps_by_fictitious_record(
+    fictitious_record_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
     permission_check = Depends(PermissionChecker("view_dl_records"))
 ):
-    traps = crud.get_traps_by_record(db, record_id)
+    traps = crud.get_traps_by_fictitious_record(db, fictitious_record_id)
     return traps
 
 # update
@@ -287,6 +290,66 @@ def delete_trap(
     permission_check = Depends(PermissionChecker("edit_dl_record"))
 ):
     result = crud.delete_trap(db, trap_id)
+    return result
+
+
+# FICTITIOUS RECORD (New)
+
+# create
+@router.post("/{record_id}/fictitious", response_model=DriverLicenseFictitiousResponse)
+def create_fictitious_record(
+    record_id: int,
+    payload: DriverLicenseFictitiousCreate,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
+    permission_check = Depends(PermissionChecker("edit_dl_record"))
+):
+    record = crud.create_fictitious_record(db, record_id, payload)
+    return record
+
+# get all by original record
+@router.get("/{record_id}/fictitious", response_model=List[DriverLicenseFictitiousResponse])
+def get_fictitious_records_by_original(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+    permission_check = Depends(PermissionChecker("view_dl_records"))
+):
+    records = crud.get_fictitious_records_by_original_id(db, record_id)
+    return records
+
+# get by id
+@router.get("/fictitious/{record_id}", response_model=DriverLicenseFictitiousResponse)
+def get_fictitious_record_by_id(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+    permission_check = Depends(PermissionChecker("view_dl_records"))
+):
+    record = crud.get_fictitious_record_by_id(db, record_id)
+    return record
+
+# update
+@router.put("/fictitious/{record_id}/update", response_model=DriverLicenseFictitiousResponse)
+def update_fictitious_record(
+    record_id: int,
+    payload: DriverLicenseFictitiousUpdate,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
+    permission_check = Depends(PermissionChecker("edit_dl_record"))
+):
+    record = crud.update_fictitious_record(db, record_id, payload)
+    return record
+
+# delete
+@router.delete("/fictitious/{record_id}/delete", response_model=DeleteResponse)
+def delete_fictitious_record(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin")),
+    permission_check = Depends(PermissionChecker("edit_dl_record"))
+):
+    result = crud.delete_fictitious_record(db, record_id)
     return result
 
 
