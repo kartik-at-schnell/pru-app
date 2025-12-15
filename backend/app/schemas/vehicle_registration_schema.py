@@ -296,7 +296,7 @@ class BaseVehicleRegistrationCreate(BaseModel):
     use_tax : Optional[float] = None
     sticker_issued : Optional[str] = None
     sticker_numbers : Optional[str] = None
-    body_type: Optional[str]
+    body_type: Optional[str] = None
     model: Optional[str] = None
     category: Optional[str] = None
 
