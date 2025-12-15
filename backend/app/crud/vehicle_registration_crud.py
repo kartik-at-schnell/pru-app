@@ -470,10 +470,15 @@ def update_contact(db: Session, contact_id: int, payload: VehicleRegistrationCon
   
     contact = get_contact(db, contact_id)
     
-    db.delete(contact)
+    update_data = payload.model_dump(exclude_unset=True)
+    
+    for field, value in update_data.items():
+        setattr(contact, field, value)
+    
     db.commit()
+    db.refresh(contact)
 
-    return {"message": f"Contact {contact_id} deleted successfully"}
+    return contact
 
 
 def get_all_contacts(db: Session, skip: int = 0, limit: int = 100):
