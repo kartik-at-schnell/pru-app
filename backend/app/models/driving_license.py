@@ -24,7 +24,7 @@ class DriverLicenseOriginalRecord(BaseModel):
 
     # relationship
     contacts = relationship("DriverLicenseContact", back_populates="original_record")
-    fictitious_traps = relationship("DriverLicenseFictitiousTrap", back_populates="original_record")
+    fictitious_records = relationship("DriverLicenseFictitious", back_populates="original_record")
 
 
 # dl contact
@@ -73,7 +73,7 @@ class DriverLicenseFictitiousTrap(BaseModel):
     id = Column(Integer, primary_key=True, index=True)
 
     #fk
-    original_record_id = Column(Integer, ForeignKey("driver_license.id"), nullable=True)
+    fictitious_record_id = Column(Integer, ForeignKey("driver_license_fictitious.id"), nullable=False)
     
     date = Column(Date) 
     number = Column(String(50)) 
@@ -100,4 +100,27 @@ class DriverLicenseFictitiousTrap(BaseModel):
     app_created_by = Column(String(100)) 
     app_modified_by = Column(String(100)) 
 
-    original_record = relationship("DriverLicenseOriginalRecord", back_populates="fictitious_traps")
+    fictitious_record = relationship("DriverLicenseFictitious", back_populates="traps")
+
+
+# dl fictitious record
+class DriverLicenseFictitious(BaseModel):
+    __tablename__ = "driver_license_fictitious"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # fk
+    original_record_id = Column(Integer, ForeignKey("driver_license.id"), nullable=False)
+
+    fake_first_name = Column(String(50), nullable=False)
+    fake_last_name = Column(String(50), nullable=False)
+    fake_license_number = Column(String(50), nullable=False)
+    agency = Column(String(100), nullable=False)
+    contact_details = Column(String(200), nullable=False)
+    date_issued = Column(Date, nullable=False)
+    approval_status = Column(String(50), default="pending", nullable=False)
+    
+    # relations
+    original_record = relationship("DriverLicenseOriginalRecord", back_populates="fictitious_records")
+    traps = relationship("DriverLicenseFictitiousTrap", back_populates="fictitious_record", cascade="all, delete-orphan")
+

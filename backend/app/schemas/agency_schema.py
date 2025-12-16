@@ -74,7 +74,7 @@ class AgencyTypeResponse(BaseModel):
 
 # AgencyOrder schemas
 class AgencyOrderCreate(BaseModel):
-    agency_id: int
+    agency_id: Optional[int] = None  # Accept as string and will be converted
     display_context: str = Field(..., max_length=50)
     order_sequence: int = Field(..., ge=0)
     is_default: Optional[bool] = False
@@ -85,7 +85,7 @@ class AgencyOrderCreate(BaseModel):
 
 class AgencyOrderResponse(BaseModel):
     id: int
-    agency_id: int
+    agency_id: Optional[int] = None
     display_context: str
     order_sequence: int
     is_default: Optional[bool] = False
