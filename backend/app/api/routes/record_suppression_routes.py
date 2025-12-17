@@ -30,6 +30,8 @@ from app.crud.vehicle_registration_crud import get_vehicle_master_details
 from app.models.record_suppression import RecordSuppressionRequest
 from app.security import get_current_user
 from app.crud.action_crud import get_record_by_id
+from app.models import user_models
+from app.rbac import PermissionChecker, RoleChecker
 
 router = APIRouter(
     prefix="/record-suppression",
@@ -51,7 +53,9 @@ async def suppress_record_endpoint(
     record_type: str,
     record_id: int,
     payload: SuppressRecordRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+    permission_check = Depends(PermissionChecker("create_suppression_request"))
 ):
     try:
         suppression = suppress_record(db, record_type, record_id, payload)
@@ -80,7 +84,9 @@ async def suppress_record_endpoint(
 async def revoke_suppression_endpoint(
     suppression_id: int,
     payload: RevokeSuppressionRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
+    permission_check = Depends(PermissionChecker("reject_suppression"))
 ):
     try:
         suppression = revoke_suppression(db, suppression_id, payload)
@@ -109,7 +115,9 @@ async def revoke_suppression_endpoint(
 async def get_history_endpoint(
     record_type: str,
     record_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+    permission_check = Depends(PermissionChecker("view_audit_logs"))
 ):
     try:
         history = get_suppression_history(db, record_type, record_id)
@@ -130,7 +138,9 @@ async def list_active_suppressions_endpoint(
     record_type: str = Query(None, description="Filter by record type (optional)"),
     limit: int = Query(50, ge=1, le=100, description="Number of results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+    permission_check = Depends(PermissionChecker("view_suppression_requests"))
 ):
     try:
         result = get_active_suppressions(
@@ -155,7 +165,9 @@ async def list_active_suppressions_endpoint(
 async def check_suppression_endpoint(
     record_type: str,
     record_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+    permission_check = Depends(PermissionChecker("view_suppression_requests"))
 ):
     try:
         suppression = get_suppression_for_record(db, record_type, record_id)
@@ -189,7 +201,9 @@ async def check_suppression_endpoint(
 )
 async def create_suppressed_vr_master_endpoint(
     payload: CreateSuppressedVRMasterRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+    permission_check = Depends(PermissionChecker("create_suppression_request"))
 ):
     try:
         result = create_suppressed_vr_master(db, payload)
@@ -228,7 +242,9 @@ async def create_suppressed_vr_master_endpoint(
 )
 async def create_suppressed_dl_original_endpoint(
     payload: CreateSuppressedDLOriginalRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+    permission_check = Depends(PermissionChecker("create_suppression_request"))
 ):
     try:
         result = create_suppressed_dl_original(db, payload)
@@ -263,7 +279,8 @@ async def create_suppressed_dl_original_endpoint(
 def open_suppressed_record(
     suppression_id: int = Path(..., description="Suppression numeric id"),
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+    permission_check = Depends(PermissionChecker("view_suppression_requests"))
 ):
     # 1) load suppression row
     suppression = db.query(RecordSuppressionRequest).filter(

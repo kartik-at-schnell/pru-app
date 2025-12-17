@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -55,7 +56,7 @@ def register_new_user(
 
 @router.get("/getUserRoleandPermission_byemail", response_model=user_schema.UserWithPermissions)
 def get_current_user_profile(
-    email: str | None = None,
+    email: Optional[str] = None,
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

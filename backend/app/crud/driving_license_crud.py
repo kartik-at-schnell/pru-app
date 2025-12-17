@@ -4,14 +4,17 @@ from typing import List, Optional
 from app.models.driving_license import (
     DriverLicenseOriginalRecord,
     DriverLicenseContact,
-    DriverLicenseFictitiousTrap
+    DriverLicenseFictitiousTrap,
+    DriverLicenseFictitious
 )
 from app.schemas.driving_license_schema import (
     DriverLicenseOriginalCreate,
     DriverLicenseOriginalUpdate,
     DriverLicenseContactCreate,
     DriverLicenseFictitiousTrapCreate,
-    DriverLicenseSearchQuery
+    DriverLicenseSearchQuery,
+    DriverLicenseFictitiousCreate,
+    DriverLicenseFictitiousUpdate
 )
 from app.models.base import ActionType
 from app.models import driving_license
@@ -75,18 +78,18 @@ def create_contact(db: Session, original_record_id: int, payload: DriverLicenseC
     return contact
 
 # new fict trap record
-def create_fictitious_trap(db: Session, original_record_id: int, payload: DriverLicenseFictitiousTrapCreate):
+def create_fictitious_trap(db: Session, fictitious_record_id: int, payload: DriverLicenseFictitiousTrapCreate):
 
-    #verify original record exists
-    original = db.query(DriverLicenseOriginalRecord).filter(
-        DriverLicenseOriginalRecord.id == original_record_id
+    #verify fictitious record exists
+    fictitious_record = db.query(DriverLicenseFictitious).filter(
+        DriverLicenseFictitious.id == fictitious_record_id
     ).first()
     
-    if not original:
-        raise HTTPException(status_code=404, detail="Original record not found")
+    if not fictitious_record:
+        raise HTTPException(status_code=404, detail="Fictitious record not found")
     
     trap = DriverLicenseFictitiousTrap(
-        original_record_id=original_record_id,
+        fictitious_record_id=fictitious_record_id,
         # mandatory fields
         # date=payload.date,
         number=payload.number,
@@ -167,7 +170,7 @@ def get_record_by_id(db: Session, record_id: int):
 
     record = db.query(DriverLicenseOriginalRecord).options(
         joinedload(DriverLicenseOriginalRecord.contacts),
-        joinedload(DriverLicenseOriginalRecord.fictitious_traps)
+        joinedload(DriverLicenseOriginalRecord.fictitious_records).joinedload(DriverLicenseFictitious.traps)
     ).filter(
         DriverLicenseOriginalRecord.id == record_id
     ).first()
@@ -259,12 +262,28 @@ def hard_delete_record(db: Session, record_id: int):
     ).delete()
     
     # Delete related fictitious traps
-    db.query(DriverLicenseFictitiousTrap).filter(
-        DriverLicenseFictitiousTrap.original_record_id == record_id
-    ).delete()
+    # Since we moved traps to fictitious records and don't have DB-level cascade:
+    # 1. Get IDs of fictitious records
+    fictitious_records = db.query(DriverLicenseFictitious.id).filter(
+        DriverLicenseFictitious.original_record_id == record_id
+    ).all()
+    fictitious_ids = [r.id for r in fictitious_records]
+    
+    if fictitious_ids:
+        db.query(DriverLicenseFictitiousTrap).filter(
+            DriverLicenseFictitiousTrap.fictitious_record_id.in_(fictitious_ids)
+        ).delete(synchronize_session=False)
+
+    # 2. Delete fictitious records
+    db.query(DriverLicenseFictitious).filter(
+        DriverLicenseFictitious.original_record_id == record_id
+    ).delete(synchronize_session=False)
     
     # Delete the original record
-    db.delete(record)
+    db.query(DriverLicenseOriginalRecord).filter(
+        DriverLicenseOriginalRecord.id == record_id
+    ).delete(synchronize_session=False)
+    
     db.commit()
     
     return {"message": f"Record {record_id} permanently deleted"}
@@ -379,11 +398,11 @@ def get_trap_by_id(db: Session, trap_id: int):
     
     return trap
 
-# get all for one record
-def get_traps_by_record(db: Session, record_id: int):
+# get all for one fictitious record
+def get_traps_by_fictitious_record(db: Session, fictitious_record_id: int):
     
     traps = db.query(DriverLicenseFictitiousTrap).filter(
-        DriverLicenseFictitiousTrap.original_record_id == record_id
+        DriverLicenseFictitiousTrap.fictitious_record_id == fictitious_record_id
     ).all()
     
     return traps
@@ -448,3 +467,84 @@ def get_records_count(db: Session):
         "pending": pending,
         "rejected": rejected
     }
+
+
+# FICTITIOUS RECORD
+
+# create
+def create_fictitious_record(db: Session, original_record_id: int, payload: DriverLicenseFictitiousCreate):
+    
+    #verify original record exists
+    original = db.query(DriverLicenseOriginalRecord).filter(
+        DriverLicenseOriginalRecord.id == original_record_id
+    ).first()
+    
+    if not original:
+        raise HTTPException(status_code=404, detail="Original record not found")
+        
+    fictitious = DriverLicenseFictitious(
+        original_record_id=original_record_id,
+        fake_first_name=payload.fake_first_name,
+        fake_last_name=payload.fake_last_name,
+        fake_license_number=payload.fake_license_number,
+        agency=payload.agency,
+        contact_details=payload.contact_details,
+        date_issued=payload.date_issued,
+        approval_status=payload.approval_status
+    )
+    
+    db.add(fictitious)
+    db.commit()
+    db.refresh(fictitious)
+    
+    return fictitious
+
+# get by original id
+def get_fictitious_records_by_original_id(db: Session, original_record_id: int):
+    return db.query(DriverLicenseFictitious).filter(
+        DriverLicenseFictitious.original_record_id == original_record_id
+    ).all()
+
+# get by id
+def get_fictitious_record_by_id(db: Session, record_id: int):
+    record = db.query(DriverLicenseFictitious).filter(
+        DriverLicenseFictitious.id == record_id
+    ).first()
+    
+    if not record:
+        raise HTTPException(status_code=404, detail="Fictitious record not found")
+        
+    return record
+
+# update
+def update_fictitious_record(db: Session, record_id: int, payload: DriverLicenseFictitiousUpdate):
+    record = db.query(DriverLicenseFictitious).filter(
+        DriverLicenseFictitious.id == record_id
+    ).first()
+    
+    if not record:
+        raise HTTPException(status_code=404, detail="Fictitious record not found")
+        
+    update_data = payload.model_dump(exclude_unset=True)
+    
+    for field, value in update_data.items():
+        setattr(record, field, value)
+        
+    db.commit()
+    db.refresh(record)
+    
+    return record
+
+# delete
+def delete_fictitious_record(db: Session, record_id: int):
+    record = db.query(DriverLicenseFictitious).filter(
+        DriverLicenseFictitious.id == record_id
+    ).first()
+    
+    if not record:
+        raise HTTPException(status_code=404, detail="Fictitious record not found")
+        
+    db.delete(record)
+    db.commit()
+    
+    return {"message": "Fictitious record deleted successfully"}

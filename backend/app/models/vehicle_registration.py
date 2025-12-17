@@ -95,7 +95,9 @@ class VehicleRegistrationUnderCover(BaseModel):
     unladen_wt = Column(String(50))
     paper_issue_code = Column(String(50))
     cert_type = Column(String(50))
- 
+
+    officer = Column(String(100))
+
     link_to_folder = Column(Text)
     document_id = Column(String(100))
  
@@ -163,6 +165,8 @@ class VehicleRegistrationFictitious(BaseModel):
     paper_issue_code = Column(String(50))
     cert_type = Column(String(50))
     link_to_folder = Column(Text)
+    officer = Column(String(100))
+
  
     active_status = Column(Boolean, default=True)
     error_text = Column(Text)
@@ -207,6 +211,8 @@ class VehicleRegistrationReciprocalIssued(BaseModel):
     sticker_number = Column(String(50))
  
     issuing_authority = Column(String(100))
+    agreement_issued_id = Column(String(100))
+
     issuing_state = Column(String(100))
     recipient_state = Column(String(100))
  

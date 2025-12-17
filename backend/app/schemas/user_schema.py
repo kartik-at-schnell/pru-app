@@ -18,7 +18,7 @@ class Role(RoleBase):
 # base schema with fields common to reading/creating
 class UserBase(BaseModel):
     email: EmailStr # automatically validates email format
-    first_name: str
+    first_name: Optional[str] = None
     middle_name: Optional[str] = None
     last_name: Optional[str] = None
     is_active: bool = True

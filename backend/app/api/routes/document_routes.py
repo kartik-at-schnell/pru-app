@@ -11,6 +11,7 @@ from app.schemas.document_schema import DocumentLibrarySchema, DocumentResponse,
 from datetime import datetime
 from app.schemas import document_schema
 from app.security import get_current_user
+from app.rbac import PermissionChecker, RoleChecker
 from app.models.user_models import User
 from app.schemas.base_schema import ApiResponse
 
@@ -21,7 +22,8 @@ UPLOAD_DIR = "app/static/uploads"
 def get_all_documents(
     document_type: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(RoleChecker("Admin", "Supervisor", "User")),
+    permission_check = Depends(PermissionChecker("view_document_library"))
 ):
     query = db.query(DocumentLibrary)
     if document_type:
@@ -35,7 +37,8 @@ async def upload_document(
     document_type: str = Form(...),
     master_record_id: Optional[int] = Form(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(RoleChecker("Admin", "Supervisor", "User")),
+    permission_check = Depends(PermissionChecker("upload_document"))
 ):
     try:
         os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -83,7 +86,8 @@ async def upload_document(
 def get_document(
     document_id: int = Path(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(RoleChecker("Admin", "Supervisor", "User")),
+    permission_check = Depends(PermissionChecker("view_document_metadata"))
 ):
     doc = db.query(DocumentLibrary).filter_by(id=document_id).first()
     if not doc:
@@ -95,7 +99,8 @@ def get_document(
 def simulate_ocr_processing(
     document_id: int = Path(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(RoleChecker("Admin", "Supervisor")),
+    permission_check = Depends(PermissionChecker("rerun_abbyy_document"))
 ):
     doc = db.query(DocumentLibrary).filter_by(id=document_id).first()
     if not doc:
@@ -136,7 +141,8 @@ def update_document(
     document_id: int = Path(...),
     payload: DocumentUpdateRequest = Body(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(RoleChecker("Admin", "Supervisor")),
+    permission_check = Depends(PermissionChecker("edit_document_metadata"))
 ):
     doc = db.query(DocumentLibrary).filter(DocumentLibrary.id == document_id).first()
     if not doc:
@@ -172,7 +178,8 @@ def update_document(
 def archive_document(
     document_id: int = Path(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(RoleChecker("Admin")),
+    permission_check = Depends(PermissionChecker("delete_document"))
 ):
     doc = db.query(DocumentLibrary).filter_by(id=document_id).first()
     if not doc:
