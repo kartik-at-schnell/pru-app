@@ -23,7 +23,7 @@ def get_all_documents(
     document_type: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(RoleChecker("Admin", "Supervisor", "User")),
-    permission_check = Depends(PermissionChecker("view_document_library"))
+    permission_check = Depends(PermissionChecker("holding:view_list"))
 ):
     query = db.query(DocumentLibrary)
     if document_type:
@@ -38,7 +38,7 @@ async def upload_document(
     master_record_id: Optional[int] = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(RoleChecker("Admin", "Supervisor", "User")),
-    permission_check = Depends(PermissionChecker("upload_document"))
+    permission_check = Depends(PermissionChecker("holding:edit"))
 ):
     try:
         os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -87,7 +87,7 @@ def get_document(
     document_id: int = Path(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(RoleChecker("Admin", "Supervisor", "User")),
-    permission_check = Depends(PermissionChecker("view_document_metadata"))
+    permission_check = Depends(PermissionChecker("holding:view_details"))
 ):
     doc = db.query(DocumentLibrary).filter_by(id=document_id).first()
     if not doc:
@@ -100,7 +100,7 @@ def simulate_ocr_processing(
     document_id: int = Path(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(RoleChecker("Admin", "Supervisor")),
-    permission_check = Depends(PermissionChecker("rerun_abbyy_document"))
+    permission_check = Depends(PermissionChecker("holding:rerun_classification"))
 ):
     doc = db.query(DocumentLibrary).filter_by(id=document_id).first()
     if not doc:
@@ -142,7 +142,7 @@ def update_document(
     payload: DocumentUpdateRequest = Body(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(RoleChecker("Admin", "Supervisor")),
-    permission_check = Depends(PermissionChecker("edit_document_metadata"))
+    permission_check = Depends(PermissionChecker("holding:edit"))
 ):
     doc = db.query(DocumentLibrary).filter(DocumentLibrary.id == document_id).first()
     if not doc:
@@ -179,7 +179,7 @@ def archive_document(
     document_id: int = Path(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(RoleChecker("Admin")),
-    permission_check = Depends(PermissionChecker("delete_document"))
+    permission_check = Depends(PermissionChecker("holding:edit"))
 ):
     doc = db.query(DocumentLibrary).filter_by(id=document_id).first()
     if not doc:

@@ -7,6 +7,7 @@ class VehicleRegistrationMaster(BaseModel):
     __tablename__ = "vehicle_registration_master"
 
     id = Column(Integer, primary_key=True, index=True, nullable=False)
+    record_id = Column(String(50), unique=True, index=True, nullable=False)
     license_number = Column(String(20), unique=True, index=True)
     exempted_license_plate = Column(String(50))
     vehicle_id_number = Column(String(20), index=True)
@@ -118,6 +119,10 @@ class VehicleRegistrationUnderCover(BaseModel):
 
     is_suppressed = Column(Boolean, default=False, index=True)
  
+    @property
+    def record_id(self):
+        return self.master_record.record_id if self.master_record else None
+
     master_record = relationship("VehicleRegistrationMaster", back_populates="undercover_records")
     trap_info = relationship("VehicleRegistrationUnderCoverTrapInfo", back_populates="undercover_record", cascade="all, delete-orphan")
  
@@ -172,8 +177,12 @@ class VehicleRegistrationFictitious(BaseModel):
     error_text = Column(Text)
     description = Column(Text)
 
-    is_suppressed = Column(Boolean, default=False, index=True)                        
+    is_suppressed = Column(Boolean, default=False, index=True)
  
+    @property
+    def record_id(self):
+        return self.master_record.record_id if self.master_record else None
+
     master_record = relationship("VehicleRegistrationMaster", back_populates="fictitious_records")
     trap_info = relationship("VehicleRegistrationFictitiousTrapInfo", back_populates="fictitious_record", cascade="all, delete-orphan")
  
@@ -237,6 +246,7 @@ class VehicleRegistrationReciprocalReceived(BaseModel):
     expiry_date = Column(Date)
  
     issuing_authority = Column(String(100))
+    agreement_received_id = Column(String(100))
     issuing_state = Column(String(100))
     recipient_state = Column(String(100))
  

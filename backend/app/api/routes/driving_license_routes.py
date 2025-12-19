@@ -34,7 +34,7 @@ def create_original_record(
     payload: DriverLicenseOriginalCreate,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("create_new_dl"))
+    permission_check = Depends(PermissionChecker("dl:create_original"))
 ):
     try:
         record = crud.create_original_record(db, payload)
@@ -52,7 +52,7 @@ def get_all_records(
     active_only: bool = True,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_dl_records"))
+    permission_check = Depends(PermissionChecker("dl:view_list"))
 ):
     records = crud.get_all_records(
         db=db,
@@ -74,7 +74,7 @@ def get_record_by_id(
     record_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_dl_records"))
+    permission_check = Depends(PermissionChecker("dl:view_details"))
 ):
     record = crud.get_record_by_id(db, record_id)
     return record
@@ -85,7 +85,7 @@ def get_record_by_tdl(
     tdl: str,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_dl_records"))
+    permission_check = Depends(PermissionChecker("dl:search"))
 ):
     record = crud.get_record_by_tdl(db, tdl)
     return record
@@ -97,7 +97,7 @@ def update_original_record(
     payload: DriverLicenseOriginalUpdate,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("edit_dl_record"))
+    permission_check = Depends(PermissionChecker("dl:edit"))
 ):
     record = crud.update_original_record(db, record_id, payload)
     return record
@@ -108,7 +108,7 @@ def soft_delete_record(
     record_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin")),
-    permission_check = Depends(PermissionChecker("edit_dl_record"))
+    permission_check = Depends(PermissionChecker("dl:edit"))
 ):
     result = crud.soft_delete_record(db, record_id)
     return result
@@ -119,7 +119,7 @@ def restore_record(
     record_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin")),
-    permission_check = Depends(PermissionChecker("edit_dl_record"))
+    permission_check = Depends(PermissionChecker("dl:edit"))
 ):
     record = crud.restore_record(db, record_id)
     return record
@@ -130,7 +130,7 @@ def hard_delete_record(
     record_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin")),
-    permission_check = Depends(PermissionChecker("edit_dl_record"))
+    permission_check = Depends(PermissionChecker("dl:edit"))
 ):
     result = crud.hard_delete_record(db, record_id)
     return result
@@ -143,7 +143,7 @@ def get_all_contacts(
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_dl_records"))
+    permission_check = Depends(PermissionChecker("dl:view_list"))
 ):
     contacts = crud.get_all_contacts(db, skip=skip, limit=limit)
     return ApiResponse(
@@ -158,7 +158,7 @@ def get_contact_by_id(
     contact_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_dl_records"))
+    permission_check = Depends(PermissionChecker("dl:view_details"))
 ):
     contact = crud.get_contact_by_id(db, contact_id)
     return ApiResponse(
@@ -174,7 +174,7 @@ def create_contact(
     payload: DriverLicenseContactCreate,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("edit_dl_record"))
+    permission_check = Depends(PermissionChecker("dl:edit"))
 ):
     contact = crud.create_contact(db, record_id, payload)
     return contact
@@ -185,7 +185,7 @@ def get_contacts_by_record(
     record_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_dl_records"))
+    permission_check = Depends(PermissionChecker("dl:view_details"))
 ):
     contacts = crud.get_contacts_by_record(db, record_id)
     return contacts
@@ -197,7 +197,7 @@ def update_contact(
     payload: DriverLicenseContactCreate,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("edit_dl_record"))
+    permission_check = Depends(PermissionChecker("dl:edit"))
 ):
     contact = crud.update_contact(db, contact_id, payload)
     return contact
@@ -208,7 +208,7 @@ def delete_contact(
     contact_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin")),
-    permission_check = Depends(PermissionChecker("edit_dl_record"))
+    permission_check = Depends(PermissionChecker("dl:edit"))
 ):
     result = crud.delete_contact(db, contact_id)
     return result
@@ -221,7 +221,7 @@ def get_all_traps(
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_dl_records"))
+    permission_check = Depends(PermissionChecker("dl:view_list"))
 ):
     traps = crud.get_all_traps(db, skip=skip, limit=limit)
     return ApiResponse(
@@ -236,7 +236,7 @@ def get_trap_by_id(
     trap_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_dl_records"))
+    permission_check = Depends(PermissionChecker("dl:view_details"))
 ):
     trap = crud.get_trap_by_id(db, trap_id)
     return ApiResponse(
@@ -253,7 +253,7 @@ def create_fictitious_trap(
     payload: DriverLicenseFictitiousTrapCreate,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("edit_dl_record"))
+    permission_check = Depends(PermissionChecker("dl:edit"))
 ):
     trap = crud.create_fictitious_trap(db, fictitious_record_id, payload)
     return trap
@@ -264,7 +264,7 @@ def get_traps_by_fictitious_record(
     fictitious_record_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_dl_records"))
+    permission_check = Depends(PermissionChecker("dl:view_details"))
 ):
     traps = crud.get_traps_by_fictitious_record(db, fictitious_record_id)
     return traps
@@ -276,7 +276,7 @@ def update_trap(
     payload: DriverLicenseFictitiousTrapCreate,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("edit_dl_record"))
+    permission_check = Depends(PermissionChecker("dl:edit"))
 ):
     trap = crud.update_trap(db, trap_id, payload)
     return trap
@@ -287,7 +287,7 @@ def delete_trap(
     trap_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin")),
-    permission_check = Depends(PermissionChecker("edit_dl_record"))
+    permission_check = Depends(PermissionChecker("dl:edit"))
 ):
     result = crud.delete_trap(db, trap_id)
     return result
@@ -302,7 +302,7 @@ def create_fictitious_record(
     payload: DriverLicenseFictitiousCreate,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("edit_dl_record"))
+    permission_check = Depends(PermissionChecker("dl:create_fictitious"))
 ):
     record = crud.create_fictitious_record(db, record_id, payload)
     return record
@@ -313,7 +313,7 @@ def get_fictitious_records_by_original(
     record_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_dl_records"))
+    permission_check = Depends(PermissionChecker("dl:view_details"))
 ):
     records = crud.get_fictitious_records_by_original_id(db, record_id)
     return records
@@ -324,7 +324,7 @@ def get_fictitious_record_by_id(
     record_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_dl_records"))
+    permission_check = Depends(PermissionChecker("dl:view_details"))
 ):
     record = crud.get_fictitious_record_by_id(db, record_id)
     return record
@@ -336,7 +336,7 @@ def update_fictitious_record(
     payload: DriverLicenseFictitiousUpdate,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("edit_dl_record"))
+    permission_check = Depends(PermissionChecker("dl:edit"))
 ):
     record = crud.update_fictitious_record(db, record_id, payload)
     return record
@@ -347,7 +347,7 @@ def delete_fictitious_record(
     record_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin")),
-    permission_check = Depends(PermissionChecker("edit_dl_record"))
+    permission_check = Depends(PermissionChecker("dl:edit"))
 ):
     result = crud.delete_fictitious_record(db, record_id)
     return result
