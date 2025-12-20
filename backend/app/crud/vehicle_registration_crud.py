@@ -70,6 +70,7 @@ def create_master_record(db, payload: MasterCreateRequest):
         make=payload.make,
         model=payload.model,
         year_model=payload.year_model,
+        year_sold=payload.year_sold,
         body_type=payload.body_type,
         type_license=payload.type_license,
         type_vehicle=payload.type_vehicle,
@@ -116,6 +117,7 @@ def create_undercover_record(db, payload: UnderCoverCreateRequest):
         zip_code=payload.zip_code,
         make=payload.make,
         year_model=payload.year_model,
+        year_sold=payload.year_sold,
         class_type=payload.class_type,
         type_license=payload.type_license,
         expiration_date=payload.expiration_date,
@@ -123,7 +125,8 @@ def create_undercover_record(db, payload: UnderCoverCreateRequest):
         date_fee_received=payload.date_fee_received,
         amount_paid=payload.amount_paid,
         active_status=payload.active_status,
-        officer=payload.officer
+        officer=payload.officer,
+        cert_type=payload.cert_type
     )
     db.add(record)
     db.commit()
@@ -149,11 +152,13 @@ def create_fictitious_record(db, payload: FictitiousCreateRequest):
         make=payload.make,
         model=payload.model,
         year_model=payload.year_model,
+        year_sold=payload.year_sold,
         vlp_class=payload.vlp_class,
         amount_due=payload.amount_due,
         amount_received=payload.amount_received,
         active_status=payload.active_status,
-        officer=payload.officer
+        officer=payload.officer,
+        confidential_flag=payload.confidential_flag
     )
     db.add(record)
     db.commit()
@@ -330,10 +335,15 @@ def mark_undercover_active(db: Session, uc_id: int):
     return uc
 
 def mark_undercover_inactive(db: Session, uc_id: int):
-    """Mark UC as inactive"""
+    """Mark UC as inactive - Triggers Reverse Cascade to Master"""
     uc = db.query(VehicleRegistrationUnderCover).get(uc_id)
     if not uc:
         raise HTTPException(status_code=404, detail="UC record not found")
+    
+    # Reverse Cascade: Deactivate the Master Record
+    if uc.master_record_id:
+        return mark_inactive(db, uc.master_record_id)
+    
     uc.active_status = False
     db.commit()
     return uc
@@ -347,9 +357,15 @@ def mark_fictitious_active(db: Session, fc_id: int):
     return fc
 
 def mark_fictitious_inactive(db: Session, fc_id: int):
+    """Mark FC as inactive - Triggers Reverse Cascade to Master"""
     fc = db.query(VehicleRegistrationFictitious).get(fc_id)
     if not fc:
         raise HTTPException(status_code=404, detail="FC record not found")
+    
+    # Reverse Cascade: Deactivate the Master Record
+    if fc.master_record_id:
+        return mark_inactive(db, fc.master_record_id)
+
     fc.active_status = False
     db.commit()
     return fc

@@ -12,7 +12,12 @@ from app.schemas.action_schema import ActionRequest, ActionResponse, ActionLogOu
 from app.database import get_db
 from app.models import user_models
 from app.security import get_current_user
-from app.crud.vehicle_registration_crud import bulk_active, bulk_approve, bulk_inactive, bulk_reject, bulk_set_on_hold, mark_active, mark_inactive
+from app.crud.vehicle_registration_crud import (
+    bulk_active, bulk_approve, bulk_inactive, bulk_reject, bulk_set_on_hold, 
+    mark_active, mark_inactive,
+    mark_undercover_active, mark_undercover_inactive,
+    mark_fictitious_active, mark_fictitious_inactive
+)
 from app.schemas.base_schema import ApiResponse
 from app.schemas.vehicle_registration_schema import BulkActionRequest, BulkActionResponse
 from app.models.driving_license import DriverLicenseOriginalRecord
@@ -136,6 +141,55 @@ async def mark_active_route(
     record = mark_active(db, record_id)
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
+    return {"status": "marked active", "record_id": record_id}
+
+
+# mark undercover inactive
+@router.post("/undercover/{record_id}/inactive")
+async def mark_undercover_inactive_route(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    record = mark_undercover_inactive(db, record_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Undercover Record not found")
+    return {"status": "marked inactive", "record_id": record_id}
+
+# mark undercover active
+@router.post("/undercover/{record_id}/active")
+async def mark_undercover_active_route(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    record = mark_undercover_active(db, record_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Undercover Record not found")
+    return {"status": "marked active", "record_id": record_id}
+
+# mark fictitious inactive
+@router.post("/fictitious/{record_id}/inactive")
+async def mark_fictitious_inactive_route(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    record = mark_fictitious_inactive(db, record_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Fictitious Record not found")
+    return {"status": "marked inactive", "record_id": record_id}
+
+# mark fictitious active
+@router.post("/fictitious/{record_id}/active")
+async def mark_fictitious_active_route(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    record = mark_fictitious_active(db, record_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Fictitious Record not found")
     return {"status": "marked active", "record_id": record_id}
 
 # DRIVER LICENSE ACTIONS

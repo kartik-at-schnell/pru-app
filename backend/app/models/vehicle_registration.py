@@ -116,6 +116,7 @@ class VehicleRegistrationUnderCover(BaseModel):
     active_status = Column(Boolean, default=True)
     error_text = Column(Text)
     description = Column(Text)
+    cert_type = Column(String(100))
 
     is_suppressed = Column(Boolean, default=False, index=True)
  
@@ -136,6 +137,7 @@ class VehicleRegistrationFictitious(BaseModel):
     license_number = Column(String(9), index=True, nullable=False)
     vehicle_id_number = Column(String(17), index=True)
     registered_owner = Column(String(200), nullable=False)
+    confidential_flag = Column(Boolean, default=False)
  
     address = Column(Text)
     city = Column(String(100))

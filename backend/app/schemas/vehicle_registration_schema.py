@@ -158,6 +158,7 @@ class VehicleRegistrationMasterUpdate(BaseModel):
     make: Optional[str] = None
     model: Optional[str] = None
     year_model: Optional[int] = None
+    year_sold: Optional[int] = None
     body_type: Optional[str] = None
     type_license: Optional[str] = None
     type_vehicle: Optional[str] = None
@@ -348,6 +349,7 @@ class BaseVehicleRegistrationCreate(BaseModel):
     zip_code: Optional[str] = None
     make: Optional[str] = None
     year_model: Optional[int] = None
+    year_sold: Optional[int] = None
     active_status: Optional[bool] = True
     expiration_date: Optional[date] = None
     date_issued : Optional[date] = None
@@ -383,6 +385,7 @@ class UnderCoverCreateRequest(BaseVehicleRegistrationCreate):
     date_fee_received: Optional[date] = func.now()
     amount_paid: Optional[float] = None
     officer: Optional[str] = None
+    cert_type: Optional[str] = None
 
 class FictitiousCreateRequest(BaseVehicleRegistrationCreate):
     master_record_id: int
@@ -395,6 +398,7 @@ class FictitiousCreateRequest(BaseVehicleRegistrationCreate):
     date_fee_received: Optional[date] = func.now()
     amount_paid: Optional[float] = None
     officer: Optional[str] = None
+    confidential_flag: Optional[bool] = False
 
 
 
@@ -438,18 +442,20 @@ class VehicleRegistrationResponse(BaseModel):
     model: Optional[str] = None
     body_type: Optional[str] = None
     category: Optional[str] = None
+    year_sold: Optional[int] = None
+    cert_type: Optional[str] = None
     # document_id = Optional[int] = None
     error_text: Optional[str] = None
 
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    date_recieved: Optional[date] = None
+    date_received: Optional[date] = None
     date_issued: Optional[date] = None
     expiration_date: Optional[date] = None
-    date_fee_recieved: Optional[date] = None
+    date_fee_received: Optional[date] = None
     amount_paid: Optional[Decimal] = None
     amount_due: Optional[Decimal] = None
-    amount_recieved: Optional[Decimal] = None
+    amount_received: Optional[Decimal] = None
     use_tax: Optional[int] = None
     sticker_issued: Optional[str] = None
     sticker_numbers: Optional[str] = None
@@ -475,6 +481,7 @@ class VehicleRegistrationUnderCoverResponse(VehicleRegistrationResponse):
     master_record_id : Optional[int] = None
     officer: Optional[str] = None
     active_status: Optional[bool]
+    cert_type: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -486,6 +493,7 @@ class VehicleRegistrationFictitiousResponse(VehicleRegistrationResponse):
     master_record_id : Optional[int] = None
     officer: Optional[str] = None
     active_status: Optional[bool]
+    confidential_flag: Optional[bool] = False
     
     class Config:
         from_attributes = True
@@ -500,7 +508,9 @@ class VehicleRegistrationUnderCoverUpdate(BaseModel):
     state: Optional[str] = None
     zip_code: Optional[str] = None
     make: Optional[str] = None
+    model: Optional[str] = None
     year_model: Optional[int] = None
+    year_sold: Optional[int] = None
     class_type: Optional[str] = None
     type_license: Optional[str] = None
     expiration_date: Optional[date] = None
@@ -509,6 +519,7 @@ class VehicleRegistrationUnderCoverUpdate(BaseModel):
     amount_paid: Optional[float] = None
     active_status: Optional[bool] = None
     officer: Optional[str] = None
+    cert_type: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -525,11 +536,13 @@ class VehicleRegistrationFictitiousUpdate(BaseModel):
     make: Optional[str] = None
     model: Optional[str] = None
     year_model: Optional[int] = None
+    year_sold: Optional[int] = None
     vlp_class: Optional[str] = None
     amount_due: Optional[float] = None
     amount_received: Optional[float] = None
     active_status: Optional[bool] = None
     officer: Optional[str] = None
+    confidential_flag: Optional[bool] = False
 
     class Config:
         from_attributes = True
