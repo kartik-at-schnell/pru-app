@@ -7,6 +7,7 @@ class DriverLicenseOriginalRecord(BaseModel):
     __tablename__ = "driver_license"
 
     id = Column(Integer, primary_key=True, index=True)
+    record_id = Column(String(50), nullable=True, unique=True, index=True)
 
     active_status = Column(Boolean, default=True)
     tln = Column(String(50)) 
@@ -63,6 +64,7 @@ class DriverLicenseContact(BaseModel):
     odata_color_tag = Column(String(50))
 
     is_suppressed = Column(Boolean, default=False, index=True)
+    is_active = Column(Boolean, default=True)
 
     # relations
     original_record = relationship("DriverLicenseOriginalRecord", back_populates="contacts")
@@ -106,6 +108,7 @@ class DriverLicenseFictitiousTrap(BaseModel):
 
 
 # dl fictitious record
+# dl fictitious record
 class DriverLicenseFictitious(BaseModel):
     __tablename__ = "driver_license_fictitious"
 
@@ -121,6 +124,7 @@ class DriverLicenseFictitious(BaseModel):
     contact_details = Column(String(200), nullable=False)
     date_issued = Column(Date, nullable=False)
     approval_status = Column(String(50), default="pending", nullable=False)
+    is_active = Column(Boolean, default=True)
     
     # relations
     original_record = relationship("DriverLicenseOriginalRecord", back_populates="fictitious_records")

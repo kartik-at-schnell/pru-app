@@ -18,7 +18,8 @@ from app.schemas.driving_license_schema import (
     RecordsCountResponse,
     DriverLicenseFictitiousCreate,
     DriverLicenseFictitiousUpdate,
-    DriverLicenseFictitiousResponse
+    DriverLicenseFictitiousResponse,
+    DriverLicenseOption
 )
 
 from app.schemas.base_schema import ApiResponse
@@ -41,6 +42,16 @@ def create_original_record(
         return record
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+# get options
+@router.get("/original/options", response_model=List[DriverLicenseOption])
+def get_original_options(
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+):
+    options = crud.get_record_options(db)
+    return options
+
 
 # get all records
 @router.get("/", response_model=ApiResponse[List[DriverLicenseOriginalResponse]])
@@ -100,6 +111,18 @@ def update_original_record(
     permission_check = Depends(PermissionChecker("dl:edit"))
 ):
     record = crud.update_original_record(db, record_id, payload)
+    return record
+
+
+# archive / deactivate
+@router.put("/{record_id}/deactivate", response_model=DriverLicenseOriginalResponse)
+def archive_record(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
+    permission_check = Depends(PermissionChecker("dl:edit"))
+):
+    record = crud.archive_driver_license(db, record_id)
     return record
 
 # soft delet / flag inactive
@@ -190,8 +213,20 @@ def get_contacts_by_record(
     contacts = crud.get_contacts_by_record(db, record_id)
     return contacts
 
+# get single contact
+@router.get("/contact/{contact_id}", response_model=DriverLicenseContactResponse)
+def get_contact_by_id(
+    contact_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+    permission_check = Depends(PermissionChecker("dl:view_details"))
+):
+    contact = crud.get_contact_by_id(db, contact_id)
+    return contact
+
 # update
 @router.put("/contact/{contact_id}/update", response_model=DriverLicenseContactResponse)
+@router.put("/contact/{contact_id}", response_model=DriverLicenseContactResponse)
 def update_contact(
     contact_id: int,
     payload: DriverLicenseContactCreate,
@@ -200,6 +235,19 @@ def update_contact(
     permission_check = Depends(PermissionChecker("dl:edit"))
 ):
     contact = crud.update_contact(db, contact_id, payload)
+    return contact
+
+
+# deactivate contact / archive
+@router.put("/contact/{contact_id}/archive", response_model=DriverLicenseContactResponse)
+@router.put("/contact/{contact_id}/deactivate", response_model=DriverLicenseContactResponse)
+def deactivate_contact(
+    contact_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
+    permission_check = Depends(PermissionChecker("dl:edit"))
+):
+    contact = crud.deactivate_contact(db, contact_id)
     return contact
 
 # delete
@@ -295,6 +343,22 @@ def delete_trap(
 
 # FICTITIOUS RECORD (New)
 
+# get all global
+@router.get("/fictitious/all", response_model=ApiResponse[List[DriverLicenseFictitiousResponse]])
+def get_all_fictitious_records(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+    permission_check = Depends(PermissionChecker("dl:view_list"))
+):
+    records = crud.get_all_fictitious_records(db, skip=skip, limit=limit)
+    return ApiResponse(
+        status="success",
+        message=f"Retrieved {len(records)} fictitious records",
+        data=records
+    )
+
 # create
 @router.post("/{record_id}/fictitious", response_model=DriverLicenseFictitiousResponse)
 def create_fictitious_record(
@@ -304,7 +368,7 @@ def create_fictitious_record(
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
     permission_check = Depends(PermissionChecker("dl:create_fictitious"))
 ):
-    record = crud.create_fictitious_record(db, record_id, payload)
+    record = crud.create_fictitious_record(db, record_id, payload, user_id=current_user.id)
     return record
 
 # get all by original record
@@ -331,6 +395,7 @@ def get_fictitious_record_by_id(
 
 # update
 @router.put("/fictitious/{record_id}/update", response_model=DriverLicenseFictitiousResponse)
+@router.put("/fictitious/{record_id}", response_model=DriverLicenseFictitiousResponse)
 def update_fictitious_record(
     record_id: int,
     payload: DriverLicenseFictitiousUpdate,
@@ -338,7 +403,20 @@ def update_fictitious_record(
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
     permission_check = Depends(PermissionChecker("dl:edit"))
 ):
-    record = crud.update_fictitious_record(db, record_id, payload)
+    record = crud.update_fictitious_record(db, record_id, payload, user_id=current_user.id)
+    return record
+
+
+# deactivate fictitious / archive
+@router.put("/fictitious/{record_id}/archive", response_model=DriverLicenseFictitiousResponse)
+@router.put("/fictitious/{record_id}/deactivate", response_model=DriverLicenseFictitiousResponse)
+def deactivate_fictitious_record(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
+    permission_check = Depends(PermissionChecker("dl:edit"))
+):
+    record = crud.deactivate_fictitious(db, record_id)
     return record
 
 # delete

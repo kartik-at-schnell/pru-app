@@ -20,6 +20,7 @@ class DriverLicenseOriginalBase(BaseModel):
     approval_status: Optional[str] = None 
     created_at: Optional[datetime] = None 
     created_by: Optional[int] = None  
+    created_by: Optional[int] = None
 
 
 class DriverLicenseContactBase(BaseModel):
@@ -45,6 +46,7 @@ class DriverLicenseContactBase(BaseModel):
     alternative_contact4: Optional[str] = None
     odata_color_tag: Optional[str] = None
     master_record_id: Optional[int] = None
+    is_active: Optional[bool] = True
 
 
 class DriverLicenseFictitiousTrapBase(BaseModel):
@@ -76,13 +78,16 @@ class DriverLicenseFictitiousTrapBase(BaseModel):
 
 
 class DriverLicenseFictitiousBase(BaseModel):
-    fake_first_name: Optional[str] = None
-    fake_last_name: Optional[str] = None
-    fake_license_number: Optional[str] = None
+    fake_first_name: Optional[str] = Field(None, alias="ffn")
+    fake_last_name: Optional[str] = Field(None, alias="fln")
+    fake_license_number: Optional[str] = Field(None, alias="fdl")
     agency: Optional[str] = None
-    contact_details: Optional[str] = None
+    contact_details: Optional[str] = Field(None, alias="contact")
     date_issued: Optional[date] = None
-    approval_status: Optional[str] = "pending"
+    approval_status: Optional[str] = Field("pending", alias="status")
+    is_active: Optional[bool] = True
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 # CREATE Schemas
@@ -117,12 +122,15 @@ class DriverLicenseFictitiousTrapCreate(DriverLicenseFictitiousTrapBase):
 
 
 class DriverLicenseFictitiousCreate(DriverLicenseFictitiousBase):
-    fake_first_name: str = Field(..., description="Fake First Name")
-    fake_last_name: str = Field(..., description="Fake Last Name")
-    fake_license_number: str = Field(..., description="Fake License Number")
+    fake_first_name: str = Field(..., description="Fake First Name", alias="ffn")
+    fake_last_name: str = Field(..., description="Fake Last Name", alias="fln")
+    fake_license_number: str = Field(..., description="Fake License Number", alias="fdl")
     agency: str = Field(..., description="Agency Name")
-    contact_details: str = Field(..., description="Contact Details")
+    contact_details: str = Field(..., description="Contact Details", alias="contact")
     date_issued: date = Field(..., description="Date Issued")
+    approval_status: Optional[str] = Field("pending", alias="status")
+    
+    model_config = ConfigDict(populate_by_name=True)
 
 
 # UPDATE SCHEMAS
@@ -179,6 +187,7 @@ class DriverLicenseFictitiousResponse(DriverLicenseFictitiousBase):
 
 class DriverLicenseOriginalResponse(DriverLicenseOriginalBase):
     id: int
+    record_id: Optional[str] = None
     active_status: Optional[bool] = None
     created_by: Optional[int] = None
     created_at: Optional[datetime] = None
@@ -190,6 +199,7 @@ class DriverLicenseOriginalResponse(DriverLicenseOriginalBase):
 
 class DriverLicenseOriginalDetailResponse(DriverLicenseOriginalBase):
     id: int
+    record_id: Optional[str] = None
     active_status: Optional[bool] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -225,3 +235,9 @@ class DriverLicenseSearchQuery(BaseModel):
     id: Optional[int] = None
     tdl_number: Optional[str] = None
     fdl_number: Optional[str] = None
+
+
+class DriverLicenseOption(BaseModel):
+    id: int
+    record_id: Optional[str] = None
+    tln: Optional[str] = None

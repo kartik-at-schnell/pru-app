@@ -25,7 +25,13 @@ from app.models import driving_license
 # create main record
 def create_original_record(db: Session, payload: DriverLicenseOriginalCreate):
     
+    # generate record_id (DL001, DL002 etc)
+    count = db.query(DriverLicenseOriginalRecord).count()
+    next_id = count + 1
+    record_id = f"DL{str(next_id).zfill(3)}"
+
     original = DriverLicenseOriginalRecord(
+        record_id=record_id,
         tln=payload.tln,
         tfn=payload.tfn,
         tdl=payload.tdl,
@@ -69,7 +75,8 @@ def create_contact(db: Session, original_record_id: int, payload: DriverLicenseC
         alternative_contact2=payload.alternative_contact2,
         alternative_contact3=payload.alternative_contact3,
         alternative_contact4=payload.alternative_contact4,
-        master_record_id=payload.master_record_id
+        master_record_id=payload.master_record_id,
+        is_active=payload.is_active
     )
     
     db.add(contact)
@@ -165,6 +172,12 @@ def get_all_records(
     records = query.offset(skip).limit(limit).all()
     
     return records
+
+# options dropdown
+def get_record_options(db: Session):
+    return db.query(DriverLicenseOriginalRecord.id, DriverLicenseOriginalRecord.record_id, DriverLicenseOriginalRecord.tln).filter(
+        DriverLicenseOriginalRecord.active_status == True
+    ).all()
 
 # single record with all related record 
 def get_record_by_id(db: Session, record_id: int):
@@ -314,8 +327,10 @@ def get_all_contacts(
     skip: int = 0,
     limit: int = 100
 ):
-    contacts = db.query(DriverLicenseContact).order_by(
-        DriverLicenseContact.created_at.desc()
+    contacts = db.query(DriverLicenseContact).filter(
+        DriverLicenseContact.is_active == True
+    ).order_by(
+        DriverLicenseContact.created.desc()
     ).offset(skip).limit(limit).all()
     return contacts
 
@@ -328,18 +343,28 @@ def get_contact_by_id(db: Session, contact_id: int):
     if not contact:
         raise HTTPException(status_code=404, detail="Contact not found")
     
-    return contact
-
 # get all for one record
 def get_contacts_by_record(db: Session, record_id: int):
     
-    contacts = db.query(DriverLicenseContact).filter(
-        DriverLicenseContact.original_record_id == record_id
+    return db.query(DriverLicenseContact).filter(
+        DriverLicenseContact.original_record_id == record_id,
+        DriverLicenseContact.is_active == True
     ).all()
-    
-    return contacts
 
-#update 
+
+# get single contact
+def get_contact_by_id(db: Session, contact_id: int):
+    contact = db.query(DriverLicenseContact).filter(
+        DriverLicenseContact.id == contact_id
+    ).first()
+    
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+        
+    return contact
+
+
+# update
 def update_contact(db: Session, contact_id: int, payload: DriverLicenseContactCreate):
     
     contact = db.query(DriverLicenseContact).filter(
@@ -473,7 +498,8 @@ def get_records_count(db: Session):
 # FICTITIOUS RECORD
 
 # create
-def create_fictitious_record(db: Session, original_record_id: int, payload: DriverLicenseFictitiousCreate):
+# create
+def create_fictitious_record(db: Session, original_record_id: int, payload: DriverLicenseFictitiousCreate, user_id: Optional[int] = None):
     
     #verify original record exists
     original = db.query(DriverLicenseOriginalRecord).filter(
@@ -491,7 +517,10 @@ def create_fictitious_record(db: Session, original_record_id: int, payload: Driv
         agency=payload.agency,
         contact_details=payload.contact_details,
         date_issued=payload.date_issued,
-        approval_status=payload.approval_status
+        approval_status=payload.approval_status,
+        is_active=payload.is_active,
+        created_by=user_id,
+        updated_by=user_id
     )
     
     db.add(fictitious)
@@ -500,11 +529,71 @@ def create_fictitious_record(db: Session, original_record_id: int, payload: Driv
     
     return fictitious
 
+
+# Archive / Deactivate functions
+
+def archive_driver_license(db: Session, record_id: int):
+    record = get_record_by_id(db, record_id)
+    record.active_status = False
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+def deactivate_contact(db: Session, contact_id: int):
+    contact = db.query(DriverLicenseContact).filter(DriverLicenseContact.id == contact_id).first()
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    contact.is_active = False
+    
+    # Also deactivate linked original record
+    if contact.original_record_id:
+        original = db.query(DriverLicenseOriginalRecord).filter(
+            DriverLicenseOriginalRecord.id == contact.original_record_id
+        ).first()
+        if original:
+            original.active_status = False
+
+    db.commit()
+    db.refresh(contact)
+    return contact
+
+
+def deactivate_fictitious(db: Session, fictitious_id: int):
+    record = db.query(DriverLicenseFictitious).filter(DriverLicenseFictitious.id == fictitious_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Fictitious record not found")
+        
+    record.is_active = False
+    
+    # Also deactivate linked original record
+    if record.original_record_id:
+        original = db.query(DriverLicenseOriginalRecord).filter(
+            DriverLicenseOriginalRecord.id == record.original_record_id
+        ).first()
+        if original:
+            original.active_status = False
+
+    db.commit()
+    db.refresh(record)
+    return record
+
 # get by original id
 def get_fictitious_records_by_original_id(db: Session, original_record_id: int):
     return db.query(DriverLicenseFictitious).filter(
-        DriverLicenseFictitious.original_record_id == original_record_id
+        DriverLicenseFictitious.original_record_id == original_record_id,
+        DriverLicenseFictitious.is_active == True
     ).all()
+
+
+# get all global
+def get_all_fictitious_records(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(DriverLicenseFictitious).filter(
+        DriverLicenseFictitious.is_active == True
+    ).order_by(
+        DriverLicenseFictitious.created_at.desc()
+    ).offset(skip).limit(limit).all()
 
 # get by id
 def get_fictitious_record_by_id(db: Session, record_id: int):
@@ -518,7 +607,8 @@ def get_fictitious_record_by_id(db: Session, record_id: int):
     return record
 
 # update
-def update_fictitious_record(db: Session, record_id: int, payload: DriverLicenseFictitiousUpdate):
+# update
+def update_fictitious_record(db: Session, record_id: int, payload: DriverLicenseFictitiousUpdate, user_id: Optional[int] = None):
     record = db.query(DriverLicenseFictitious).filter(
         DriverLicenseFictitious.id == record_id
     ).first()
@@ -530,6 +620,9 @@ def update_fictitious_record(db: Session, record_id: int, payload: DriverLicense
     
     for field, value in update_data.items():
         setattr(record, field, value)
+        
+    if user_id:
+        record.updated_by = user_id
         
     db.commit()
     db.refresh(record)
