@@ -68,7 +68,8 @@ def create_contact(db: Session, original_record_id: int, payload: DriverLicenseC
         alternative_contact1=payload.alternative_contact1,
         alternative_contact2=payload.alternative_contact2,
         alternative_contact3=payload.alternative_contact3,
-        alternative_contact4=payload.alternative_contact4
+        alternative_contact4=payload.alternative_contact4,
+        master_record_id=payload.master_record_id
     )
     
     db.add(contact)

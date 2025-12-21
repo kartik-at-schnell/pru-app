@@ -64,7 +64,7 @@ class VehicleRegistration(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()

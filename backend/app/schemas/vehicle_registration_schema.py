@@ -11,6 +11,7 @@ class Config:
 # child tables
 class VehicleRegistrationContact(BaseModel):
     id: int
+    master_record_id: Optional[int] = None
     contact_name: Optional[str] = None
     department: Optional[str] = None
     email: Optional[str] = None
@@ -20,6 +21,7 @@ class VehicleRegistrationContact(BaseModel):
     alt_contact_2: Optional[str] = None
     alt_contact_3: Optional[str] = None
     alt_contact_4: Optional[str] = None
+    is_active: Optional[bool] = True
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -34,7 +36,8 @@ class VehicleRegistrationReciprocalIssued(BaseModel):
     cancellation_date: Optional[date] = None
     sticker_number: Optional[str] = None
     issuing_authority: Optional[str] = None
-    agreement_issued_id: Optional[str] = None
+    agreement_issued_id: Optional[int] = None
+    is_active: Optional[bool] = True
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -47,8 +50,12 @@ class VehicleRegistrationReciprocalReceived(BaseModel):
     recipient_state: Optional[str] = None
     year_of_renewal: Optional[int] = None
     cancellation_date: Optional[date] = None
+    received_date: Optional[date] = None
+    expiry_date: Optional[date] = None
     sticker_number: Optional[str] = None
     issuing_authority: Optional[str] = None
+    agreement_received_id: Optional[int] = None
+    is_active: Optional[bool] = True
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -255,6 +262,15 @@ class VehicleRegistrationFictitiousCreateBody(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationContactCreateBody(BaseModel):
+    master_record_id: Optional[Union[int, str]] = None
+    
+    @field_validator('master_record_id', mode='before')
+    @classmethod
+    def blank_string_to_none(cls, v):
+        if v == "":
+            return None
+        return v
+
     contact_name: Optional[str] = None
     department: Optional[str] = None
     email: Optional[str] = None
@@ -264,52 +280,44 @@ class VehicleRegistrationContactCreateBody(BaseModel):
     alt_contact_2: Optional[str] = None
     alt_contact_3: Optional[str] = None
     alt_contact_4: Optional[str] = None
+    is_active: Optional[bool] = True
 
     model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationReciprocalIssuedCreateBody(BaseModel):
     master_record_id: Optional[int] = None
     description: Optional[str] = None
-    license_number: Optional[str] = None
+    license_plate: Optional[str] = None
     issuing_state: Optional[str] = None
     recipient_state: Optional[str] = None
     year_of_renewal: Optional[int] = None
     cancellation_date: Optional[date] = None
     sticker_number: Optional[str] = None
     issuing_authority: Optional[str] = None
-    agreement_issued_id: Optional[Union[str, int]] = None
+    agreement_issued_id: Optional[int] = None
+    is_active: Optional[bool] = True
 
 
     model_config = ConfigDict(from_attributes=True)
     
-    @field_validator('agreement_issued_id', mode='before')
-    @classmethod
-    def coerce_to_string_issued(cls, v):
-        if v is not None:
-            return str(v)
-        return v
+
 
 class VehicleRegistrationReciprocalReceivedCreateBody(BaseModel):
     master_record_id: Optional[int] = None
-    agreement_received_id: Optional[Union[str, int]] = None
+    agreement_received_id: Optional[int] = None
     description: Optional[str] = None
     license_number: Optional[str] = None
     issuing_state: Optional[str] = None
     recipient_state: Optional[str] = None
     year_of_renewal: Optional[int] = None
     cancellation_date: Optional[date] = None
-    recieved_date: Optional[date] = None
+    received_date: Optional[date] = None
+    expiry_date: Optional[date] = None
     sticker_number: Optional[str] = None
     issuing_authority: Optional[str] = None
-    
-    @field_validator('agreement_received_id', mode='before')
-    @classmethod
-    def coerce_to_string_received(cls, v):
-        if v is not None:
-            return str(v)
-        return v
+    is_active: Optional[bool] = True
 
-    @field_validator('cancellation_date', 'recieved_date', mode='before')
+    @field_validator('cancellation_date', 'received_date', 'expiry_date', mode='before')
     @classmethod
     def empty_string_to_none(cls, v):
         if v == "":
@@ -394,11 +402,12 @@ class FictitiousCreateRequest(BaseVehicleRegistrationCreate):
     amount_received: Optional[float] = None
     class_type: Optional[str] = None
     type_license: Optional[str] = None
+    type_vehicle: Optional[str] = None
     expiration_date: Optional[date] = None
     date_fee_received: Optional[date] = func.now()
     amount_paid: Optional[float] = None
     officer: Optional[str] = None
-    confidential_flag: Optional[bool] = False
+    confidential_flag: Optional[str] = "No"
 
 
 
@@ -456,7 +465,7 @@ class VehicleRegistrationResponse(BaseModel):
     amount_paid: Optional[Decimal] = None
     amount_due: Optional[Decimal] = None
     amount_received: Optional[Decimal] = None
-    use_tax: Optional[int] = None
+    use_tax: Optional[float] = None
     sticker_issued: Optional[str] = None
     sticker_numbers: Optional[str] = None
     created_by: Optional[str] = None
@@ -493,7 +502,7 @@ class VehicleRegistrationFictitiousResponse(VehicleRegistrationResponse):
     master_record_id : Optional[int] = None
     officer: Optional[str] = None
     active_status: Optional[bool]
-    confidential_flag: Optional[bool] = False
+    confidential_flag: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -520,6 +529,12 @@ class VehicleRegistrationUnderCoverUpdate(BaseModel):
     active_status: Optional[bool] = None
     officer: Optional[str] = None
     cert_type: Optional[str] = None
+    sticker_numbers: Optional[str] = None
+    sticker_issued: Optional[str] = None
+    use_tax: Optional[float] = None
+    amount_received: Optional[float] = None
+    amount_due: Optional[float] = None
+    date_received: Optional[date] = None
 
     class Config:
         from_attributes = True
@@ -542,7 +557,20 @@ class VehicleRegistrationFictitiousUpdate(BaseModel):
     amount_received: Optional[float] = None
     active_status: Optional[bool] = None
     officer: Optional[str] = None
-    confidential_flag: Optional[bool] = False
+    confidential_flag: Optional[str] = None
+    sticker_numbers: Optional[str] = None
+    sticker_issued: Optional[str] = None
+    use_tax: Optional[float] = None
+    amount_paid: Optional[float] = None
+    date_issued: Optional[date] = None
+    date_received: Optional[date] = None
+    date_fee_received: Optional[date] = None
+    expiration_date: Optional[date] = None
+    cert_type: Optional[str] = None
+    type_license: Optional[str] = None
+    type_vehicle: Optional[str] = None
+    body_type: Optional[str] = None
+    category: Optional[str] = None
 
     class Config:
         from_attributes = True

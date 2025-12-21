@@ -34,7 +34,9 @@ class DriverLicenseContact(BaseModel):
     id = Column(Integer, primary_key=True, index=True)
     
     # fk linking to the original record
+    # fk linking to the original record
     original_record_id = Column(Integer, ForeignKey("driver_license.id"), nullable=True)
+    master_record_id = Column(Integer, nullable=True)
 
     content_type_id = Column(String(255))
     title = Column(String(255))

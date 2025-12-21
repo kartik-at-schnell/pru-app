@@ -42,7 +42,9 @@ class DriverLicenseContactBase(BaseModel):
     alternative_contact2: Optional[str] = None
     alternative_contact3: Optional[str] = None
     alternative_contact4: Optional[str] = None
+    alternative_contact4: Optional[str] = None
     odata_color_tag: Optional[str] = None
+    master_record_id: Optional[int] = None
 
 
 class DriverLicenseFictitiousTrapBase(BaseModel):
@@ -148,7 +150,9 @@ class DriverLicenseFictitiousUpdate(DriverLicenseFictitiousBase):
 
 class DriverLicenseContactResponse(DriverLicenseContactBase):
     id: int
+    id: int
     original_record_id: Optional[int] = None
+    master_record_id: Optional[int] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     

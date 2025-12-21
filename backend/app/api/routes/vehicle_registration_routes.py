@@ -8,6 +8,8 @@ from app.crud.vehicle_registration_crud import (
     create_master_record,
     create_reciprocal_issued,
     create_reciprocal_received,
+    deactivate_reciprocal_issued,
+    deactivate_reciprocal_received,
     create_trap_info_fictitious,
     create_trap_info_undercover,
     create_undercover_record,
@@ -40,7 +42,11 @@ from app.crud.vehicle_registration_crud import (
     update_reciprocal_received,
     update_trap_info_fictitious,
     update_trap_info_undercover,
-    update_vehicle_record
+    update_trap_info_fictitious,
+    update_trap_info_undercover,
+    update_vehicle_record,
+    update_contact,
+    deactivate_contact
 )
 
 from app.schemas.vehicle_registration_schema import(
@@ -70,7 +76,7 @@ from app.security import get_current_user
 
 from app.schemas.base_schema import ApiResponse
 from app.models import user_models
-from app.crud.driving_license_crud import delete_contact, update_contact
+from app.crud.driving_license_crud import delete_contact
 from app.rbac import PermissionChecker, RoleChecker
 
 router = APIRouter(prefix="/vehicle-registration", tags=["Vehicle Registration"])
@@ -160,24 +166,45 @@ def list_vehicles(
 
 
 #update
-@router.put("/{record_id}", response_model=ApiResponse[VehicleRegistrationMasterResponse])
+@router.put("/{record_id}", response_model=ApiResponse[Union[
+    VehicleRegistrationMasterResponse,
+    VehicleRegistrationUnderCoverResponse,
+    VehicleRegistrationFictitiousResponse
+]])
 def update_vehicle(
-    record_id: str,  # Changed from str to int
-    update_data: VehicleRegistrationMasterUpdate,
+    record_id: str,
+    record_type: str = Query("master", regex="^(master|undercover|fictitious)$"),
+    update_data: dict = Body(...),
     db: Session = Depends(get_db),
-    #current_user: user_models.User = Depends(get_current_user)
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
     permission_check = Depends(PermissionChecker("vr:edit")),
 ):
-    updated = update_vehicle_record(db, record_id, update_data)
-    if not updated:
-        raise HTTPException(status_code=404, detail="Vehicle record not found")
-    
-    data = VehicleRegistrationMasterResponse.model_validate(updated)
-    return ApiResponse(
-        status="success",
-        message=f"Record {record_id} updated successfully",
-        data=data)
+    try:
+        # Choose schema based on record_type
+        if record_type == "undercover":
+            schema = VehicleRegistrationUnderCoverUpdate
+            resp_model = VehicleRegistrationUnderCoverResponse
+        elif record_type == "fictitious":
+            schema = VehicleRegistrationFictitiousUpdate
+            resp_model = VehicleRegistrationFictitiousResponse
+        else:
+            schema = VehicleRegistrationMasterUpdate
+            resp_model = VehicleRegistrationMasterResponse
+        
+        # Validate data
+        validated_data = schema.model_validate(update_data)
+        
+        updated = update_vehicle_record(db, record_id, validated_data, record_type=record_type)
+        if not updated:
+            raise HTTPException(status_code=404, detail=f"{record_type.capitalize()} record not found")
+        
+        data = resp_model.model_validate(updated)
+        return ApiResponse(
+            status="success",
+            message=f"{record_type.capitalize()} record {record_id} updated successfully",
+            data=data)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Update failed: {str(e)}")
     
 
 @router.put("/undercover/{record_id}", response_model=ApiResponse[VehicleRegistrationUnderCoverResponse])
@@ -381,7 +408,7 @@ def update_vehicle_contact(
     contact_id: int,
     payload: VehicleRegistrationContactCreateBody,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
     permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
@@ -403,6 +430,35 @@ def update_vehicle_contact(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update contact: {str(e)}"
+        )
+
+    
+    
+# Deactivate (Soft Delete equivalent)
+@router.put(
+    "/contacts/{contact_id}/deactivate",
+    response_model=ApiResponse[VehicleRegistrationContact],
+    summary="Deactivate a contact",
+)
+def deactivate_vehicle_contact(
+    contact_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+    permission_check = Depends(PermissionChecker("vr:edit")), # Consistent with other endpoints
+):
+    try:
+        result = deactivate_contact(db, contact_id)
+        return ApiResponse(
+            status="success",
+            message=f"Contact {contact_id} deactivated successfully",
+            data=VehicleRegistrationContact.model_validate(result)
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to deactivate contact: {str(e)}"
         )
 
 # delete
@@ -565,6 +621,35 @@ def update_ri(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update Reciprocal Issued: {str(e)}"
+        )
+
+
+@router.put(
+    "/reciprocal-issued/{reciprocal_id}/deactivate",
+    response_model=ApiResponse[VehicleRegistrationReciprocalIssued],
+    summary="Deactivate a reciprocal issued record",
+)
+def deactivate_ri(
+    reciprocal_id: int,
+    email: str = Query(..., description="User email for verification"),
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
+):
+    try:
+        result = deactivate_reciprocal_issued(db, reciprocal_id)
+        data = VehicleRegistrationReciprocalIssued.model_validate(result)
+        return ApiResponse(
+            status="success",
+            message=f"Reciprocal Issued {reciprocal_id} deactivated successfully",
+            data=data
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to deactivate Reciprocal Issued: {str(e)}"
         )
 
 
@@ -731,6 +816,33 @@ def delete_rr(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete Reciprocal Received: {str(e)}"
         )
+
+@router.put(
+    "/reciprocal-received/{reciprocal_id}/deactivate",
+    response_model=ApiResponse[VehicleRegistrationReciprocalReceived],
+)
+def deactivate_rr(
+    reciprocal_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
+):
+    try:
+        result = deactivate_reciprocal_received(db, reciprocal_id)
+        data = VehicleRegistrationReciprocalReceived.model_validate(result)
+        return ApiResponse(
+            status="success",
+            message="Reciprocal Received record deactivated successfully",
+            data=data
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to deactivate Reciprocal Received: {str(e)}"
+        )
+
 
 # get all
 @router.get(

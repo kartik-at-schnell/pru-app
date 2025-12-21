@@ -126,7 +126,13 @@ def create_undercover_record(db, payload: UnderCoverCreateRequest):
         amount_paid=payload.amount_paid,
         active_status=payload.active_status,
         officer=payload.officer,
-        cert_type=payload.cert_type
+        cert_type=payload.cert_type,
+        sticker_numbers=payload.sticker_numbers,
+        sticker_issued=payload.sticker_issued,
+        use_tax=payload.use_tax,
+        amount_received=payload.amount_received,
+        amount_due=payload.amount_due,
+        date_received=payload.date_received
     )
     db.add(record)
     db.commit()
@@ -158,7 +164,21 @@ def create_fictitious_record(db, payload: FictitiousCreateRequest):
         amount_received=payload.amount_received,
         active_status=payload.active_status,
         officer=payload.officer,
-        confidential_flag=payload.confidential_flag
+
+        confidential_flag=payload.confidential_flag,
+        type_vehicle=payload.type_vehicle,
+        type_license=payload.type_license,
+        body_type=payload.body_type,
+        category=payload.category,
+        sticker_numbers=payload.sticker_numbers,
+        sticker_issued=payload.sticker_issued,
+        use_tax=payload.use_tax,
+        amount_paid=payload.amount_paid,
+        date_issued=payload.date_issued,
+        date_received=payload.date_received,
+        date_fee_received=payload.date_fee_received,
+        expiration_date=payload.expiration_date,
+        cert_type=payload.cert_type
     )
     db.add(record)
     db.commit()
@@ -305,7 +325,7 @@ def get_all_masters_for_dropdown(db: Session):
         VehicleRegistrationMaster.id, 
         VehicleRegistrationMaster.vehicle_id_number,
         VehicleRegistrationMaster.registered_owner
-    ).all()
+    ).filter(VehicleRegistrationMaster.active_status == True).all()
 
 # get uc/fc for a master record
 
@@ -486,12 +506,20 @@ def bulk_delete(db: Session, record_ids: List[str]):
 
 def create_contact(db: Session, master_id: str, payload: VehicleRegistrationContactCreateBody):
 
-    master = get_master_by_record_id(db, master_id)
-    if not master:
-        raise HTTPException(status_code=404, detail="Master record not found")
+    # Relaxed logic: Strictly use the provided ID if it's a number. No lookup.
+    master_pk = payload.master_record_id
+    
+    if master_pk is None:
+        # Fallback to URL parameter if payload is empty
+        if master_id.isdigit():
+             master_pk = int(master_id)
+        # If master_id is a string like "MR001", we now ignore it as per "no linking" request
+        # or we could try to parse it if we assume it might be a digit string.
+        # But user said "no logic to check master record".
+        # Assuming URL param might be an integer ID.
     
     contact = VehicleRegistrationContact(
-        master_record_id=master.id, # Link using Integer PK
+        master_record_id=master_pk, # Link using Integer PK or None
         contact_name=payload.contact_name,
         department=payload.department,
         email=payload.email,
@@ -500,13 +528,25 @@ def create_contact(db: Session, master_id: str, payload: VehicleRegistrationCont
         alt_contact_1=payload.alt_contact_1,
         alt_contact_2=payload.alt_contact_2,
         alt_contact_3=payload.alt_contact_3,
-        alt_contact_4=payload.alt_contact_4
+        alt_contact_4=payload.alt_contact_4,
+        is_active=payload.is_active
     )
 
     db.add(contact)
     db.commit()
     db.refresh(contact)
     
+    return contact
+
+
+    return contact
+
+
+def deactivate_contact(db: Session, contact_id: int):
+    contact = get_contact(db, contact_id)
+    contact.is_active = False
+    db.commit()
+    db.refresh(contact)
     return contact
 
 
@@ -524,12 +564,28 @@ def get_contact(db: Session, contact_id: int):
 
 def get_contacts_by_master(db: Session, master_id: str):
 
-    master = get_master_by_record_id(db, master_id)
-    if not master:
-        raise HTTPException(status_code=404, detail="Master record not found")
+    # Simplified logic: Directly filter by the provided ID (assuming it's the FK)
+    # matching the "no linking" requirement.
+    target_id = None
+    if master_id.isdigit():
+        target_id = int(master_id)
     
+    # If it's not a digit, we could try to look up the master, OR just return empty.
+    # For now, let's assume if they pass "51", they mean master_record_id=51.
+    
+    if target_id is None:
+        # Fallback: maybe they sent a record_id string? 
+        # But for "simple crud", we rely on ID. 
+        # Let's try to resolve just in case, or just return empty.
+        master = get_master_by_record_id(db, master_id)
+        if master:
+            target_id = master.id
+        else:
+            return [] # or raise 404? Returns empty list if not found.
+
     contacts = db.query(VehicleRegistrationContact).filter(
-        VehicleRegistrationContact.master_record_id == master.id
+        VehicleRegistrationContact.master_record_id == target_id,
+        VehicleRegistrationContact.is_active == True
     ).all()
     
     return contacts
@@ -540,6 +596,21 @@ def update_contact(db: Session, contact_id: int, payload: VehicleRegistrationCon
     contact = get_contact(db, contact_id)
     
     update_data = payload.model_dump(exclude_unset=True)
+    
+    # Handle master_record_id: strictly numeric, no lookup
+    if 'master_record_id' in update_data:
+        raw_master_id = update_data['master_record_id']
+        master_pk = None
+        
+        if raw_master_id is not None:
+            if isinstance(raw_master_id, int):
+                master_pk = raw_master_id
+            elif isinstance(raw_master_id, str) and raw_master_id.isdigit():
+                master_pk = int(raw_master_id)
+        
+        update_data['master_record_id'] = master_pk
+
+        update_data['master_record_id'] = master_pk
     
     for field, value in update_data.items():
         setattr(contact, field, value)
@@ -552,44 +623,28 @@ def update_contact(db: Session, contact_id: int, payload: VehicleRegistrationCon
 
 def get_all_contacts(db: Session, skip: int = 0, limit: int = 100):
 
-    contacts = db.query(VehicleRegistrationContact).offset(skip).limit(limit).all()
+    contacts = db.query(VehicleRegistrationContact).filter(VehicleRegistrationContact.is_active == True).offset(skip).limit(limit).all()
     return contacts
 
 # create reciprocal issued
 def create_reciprocal_issued(db: Session, payload: VehicleRegistrationReciprocalIssuedCreateBody):
     master_id = payload.master_record_id
-    agreement_bound = False
-
-    if master_id is not None:
-        # Check if master exists directly to avoid raising 404
-        master_exists = db.query(VehicleRegistrationMaster).filter(
-            VehicleRegistrationMaster.id == master_id
-        ).first()
-        
-        if master_exists:
-            agreement_bound = True
-        else:
-            # If Master ID provided but not found in DB
-            # We treat it as a loose reference (e.g. Agreement ID) and save it in 'agreement_issued_id'
-            # only if agreement_issued_id wasn't explicitly provided
-            agreement_bound = False
-            if payload.agreement_issued_id is None:
-                payload.agreement_issued_id = str(master_id)
-            
-            # Remove the bad FK reference so DB didn't throw error
-            master_id = None
+    
+    # Relaxed logic: No check for master existence. 
+    # If it's provided, we save it. If database accepts it (no FK), it works.
     
     reciprocal = VehicleRegistrationReciprocalIssued(
         master_record_id=master_id,
         description=payload.description,
-        license_plate=payload.license_number,
+        license_plate=payload.license_plate,
         issuing_state=payload.issuing_state,
         recipient_state=payload.recipient_state,
         year_of_renewal=payload.year_of_renewal,
         cancellation_date=payload.cancellation_date,
         sticker_number=payload.sticker_number,
         issuing_authority=payload.issuing_authority,
-        agreement_issued_id=payload.agreement_issued_id
+        agreement_issued_id=payload.agreement_issued_id,
+        is_active=payload.is_active
     )
     
     db.add(reciprocal)
@@ -627,12 +682,25 @@ def get_reciprocal_issued_by_id(db: Session, reciprocal_id: int):
 
 
 def update_reciprocal_issued(db: Session, reciprocal_id: int, payload: VehicleRegistrationReciprocalIssuedCreateBody):
-    reciprocal = get_reciprocal_issued(db, reciprocal_id)
+    reciprocal = get_reciprocal_issued_by_id(db, reciprocal_id)
     
-    for key, value in payload.model_dump(exclude_unset=True).items():
+    update_data = payload.model_dump(exclude_unset=True)
+    
+    if "license_number" in update_data:
+        reciprocal.license_plate = update_data["license_number"]
+
+    for key, value in update_data.items():
         if hasattr(reciprocal, key):
             setattr(reciprocal, key, value)
     
+    db.commit()
+    db.refresh(reciprocal)
+    return reciprocal
+
+
+def deactivate_reciprocal_issued(db: Session, reciprocal_id: int):
+    reciprocal = get_reciprocal_issued_by_id(db, reciprocal_id)
+    reciprocal.is_active = False
     db.commit()
     db.refresh(reciprocal)
     return reciprocal
@@ -646,7 +714,9 @@ def delete_reciprocal_issued(db: Session, reciprocal_id: int):
 
 
 def get_all_reciprocal_issued(db: Session, skip: int = 0, limit: int = 100):
-    reciprocals = db.query(VehicleRegistrationReciprocalIssued).offset(skip).limit(limit).all()
+    reciprocals = db.query(VehicleRegistrationReciprocalIssued).filter(
+        VehicleRegistrationReciprocalIssued.is_active == True
+    ).offset(skip).limit(limit).all()
     return reciprocals
 
 
@@ -654,16 +724,7 @@ def get_all_reciprocal_issued(db: Session, skip: int = 0, limit: int = 100):
 def create_reciprocal_received(db: Session, payload: VehicleRegistrationReciprocalReceivedCreateBody):
     master_id = payload.master_record_id
     
-    if master_id is not None:
-        master_exists = db.query(VehicleRegistrationMaster).filter(
-            VehicleRegistrationMaster.id == master_id
-        ).first()
-        
-        if not master_exists:
-            # Fallback: save as agreement_received_id if not present
-            if payload.agreement_received_id is None:
-                payload.agreement_received_id = str(master_id)
-            master_id = None
+    # Relaxed logic: No master existence check. Direct save.
 
     reciprocal = VehicleRegistrationReciprocalReceived(
         master_record_id=master_id,
@@ -673,13 +734,32 @@ def create_reciprocal_received(db: Session, payload: VehicleRegistrationReciproc
         recipient_state=payload.recipient_state,
         year_of_renewal=payload.year_of_renewal,
         cancellation_date=payload.cancellation_date,
-        recieved_date=payload.recieved_date,
+
+        received_date=payload.received_date,
+        expiry_date=payload.expiry_date,
         sticker_number=payload.sticker_number,
         issuing_authority=payload.issuing_authority,
         agreement_received_id=payload.agreement_received_id
     )
     
     db.add(reciprocal)
+    db.commit()
+    db.refresh(reciprocal)
+    db.add(reciprocal)
+    db.commit()
+    db.refresh(reciprocal)
+    return reciprocal
+
+
+def deactivate_reciprocal_received(db: Session, reciprocal_id: int):
+    reciprocal = get_reciprocal_received(db, reciprocal_id)
+    if not reciprocal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Reciprocal Received record {reciprocal_id} not found"
+        )
+    
+    reciprocal.is_active = False
     db.commit()
     db.refresh(reciprocal)
     return reciprocal
@@ -709,7 +789,12 @@ def get_reciprocal_received_by_master(db: Session, master_id: str):
 def update_reciprocal_received(db: Session, reciprocal_id: int, payload: VehicleRegistrationReciprocalReceivedCreateBody):
     reciprocal = get_reciprocal_received(db, reciprocal_id)
     
-    for key, value in payload.model_dump(exclude_unset=True).items():
+    update_data = payload.model_dump(exclude_unset=True)
+
+    if "license_number" in update_data:
+        reciprocal.license_plate = update_data["license_number"]
+
+    for key, value in update_data.items():
         if hasattr(reciprocal, key):
             setattr(reciprocal, key, value)
     
@@ -725,8 +810,18 @@ def delete_reciprocal_received(db: Session, reciprocal_id: int):
     return {"message": f"Reciprocal Received {reciprocal_id} deleted successfully"}
 
 
+def deactivate_reciprocal_received(db: Session, reciprocal_id: int):
+    reciprocal = get_reciprocal_received(db, reciprocal_id)
+    reciprocal.is_active = False
+    db.commit()
+    db.refresh(reciprocal)
+    return reciprocal
+
+
 def get_all_reciprocal_received(db: Session, skip: int = 0, limit: int = 100):
-    reciprocals = db.query(VehicleRegistrationReciprocalReceived).offset(skip).limit(limit).all()
+    reciprocals = db.query(VehicleRegistrationReciprocalReceived).filter(
+        VehicleRegistrationReciprocalReceived.is_active == True
+    ).offset(skip).limit(limit).all()
     return reciprocals
 
 
