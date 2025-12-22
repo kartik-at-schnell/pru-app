@@ -2,6 +2,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from datetime import timedelta
 
 from app.database import get_db
@@ -74,7 +75,7 @@ def get_current_user_profile(
         else:
             # Check for pre-assigned roles in EmailRoleMapping
             mappings = db.query(user_models.EmailRoleMapping).filter(
-                user_models.EmailRoleMapping.email_pattern == email
+                func.lower(user_models.EmailRoleMapping.email_pattern) == email.lower()
             ).all()
             
             if mappings:

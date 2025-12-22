@@ -1,11 +1,12 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from .. import models 
 from ..schemas import user_schema 
 # from app.utils.hash_password import hash_password
 from typing import Optional
 
 def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
-    return db.query(models.User).filter(models.User.email == email).first()
+    return db.query(models.User).filter(func.lower(models.User.email) == email.lower()).first()
 
 def create_user(db: Session, user: user_schema.UserCreate) -> models.User:
     # hashed_pass = hash_password(user.password)
@@ -30,8 +31,8 @@ def create_user(db: Session, user: user_schema.UserCreate) -> models.User:
 
     for mapping in mappings:
         pattern = mapping.email_pattern
-        # Handle exact match
-        if pattern == user.email:
+        # Handle exact match (case insensitive)
+        if pattern.lower() == user.email.lower():
             db_user.roles.append(mapping.role)
         # Handle simple suffix matching (e.g., "%@admin.com")
         elif pattern.startswith("%"):
