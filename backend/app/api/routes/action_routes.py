@@ -120,6 +120,7 @@ def hold_record(record_id: str,
     return perform_action(action_data, request, db, current_user)
 
 # mark inactive
+@router.get("/{record_id}/inactive")
 @router.post("/{record_id}/inactive")
 async def mark_inactive_route(
     record_id: int,
