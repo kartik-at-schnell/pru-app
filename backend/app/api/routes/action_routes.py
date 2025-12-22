@@ -121,7 +121,6 @@ def hold_record(record_id: str,
 
 # mark inactive
 @router.get("/{record_id}/inactive")
-@router.post("/{record_id}/inactive")
 async def mark_inactive_route(
     record_id: int,
     db: Session = Depends(get_db),
