@@ -10,6 +10,15 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 import jwt
+from fastapi.responses import FileResponse
+
+from pydantic import BaseModel
+
+class ReadJsonResponse(BaseModel):
+    status: str
+    filename: str
+    data: dict
+
 
 from app.temp.abbyy_app.abbyy_database import get_db, DriverLicense, VehicleRegistration
 from app.temp.abbyy_app.extractor import extract_and_store_abbyy_response
@@ -172,6 +181,69 @@ async def list_files(username: str = Depends(verify_token)):
         return ListResponseModel(status="success", count=len(files), files=sorted(files, reverse=True))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+
+@app.get("/read/{filename}", response_model=ReadJsonResponse)
+async def read_json_file(
+    filename: str,
+    username: str = Depends(verify_token)
+):
+    try:
+        if not filename.endswith(".json"):
+            raise HTTPException(status_code=400, detail="Invalid file type")
+
+        file_path = os.path.join(MOCK_DATA_DIR, filename)
+
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File not found")
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        return ReadJsonResponse(
+            status="success",
+            filename=filename,
+            data=data
+        )
+
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Invalid JSON file")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+
+@app.get("/download/{filename}")
+async def download_json_file(
+    filename: str,
+    username: str = Depends(verify_token)
+):
+    try:
+        if not filename.endswith(".json"):
+            raise HTTPException(status_code=400, detail="Invalid file type")
+
+        file_path = os.path.join(MOCK_DATA_DIR, filename)
+
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File not found")
+
+        return FileResponse(
+            path=file_path,
+            filename=filename,
+            media_type="application/json"
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
 
 
 @app.get("/driver-licenses", response_model=List[DriverLicenseResponse])
