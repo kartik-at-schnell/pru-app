@@ -287,6 +287,7 @@ class VehicleRegistrationFictitiousTrapInfo(BaseModel):
     officer = Column(String(100))
     location = Column(String(100))
     reason = Column(String(500))
+    notes = Column(Text)
 
     fictitious_record = relationship("VehicleRegistrationFictitious", back_populates="trap_info")
 
@@ -305,5 +306,6 @@ class VehicleRegistrationUnderCoverTrapInfo(BaseModel):
  
     verified_by = Column(String(100))
     verification_date = Column(Date)
+    notes = Column(Text)
  
     undercover_record = relationship("VehicleRegistrationUnderCover", back_populates="trap_info")

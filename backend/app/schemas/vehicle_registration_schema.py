@@ -38,6 +38,8 @@ class VehicleRegistrationReciprocalIssued(BaseModel):
     issuing_authority: Optional[str] = None
     agreement_issued_id: Optional[int] = None
     is_active: Optional[bool] = True
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -56,26 +58,34 @@ class VehicleRegistrationReciprocalReceived(BaseModel):
     issuing_authority: Optional[str] = None
     agreement_received_id: Optional[int] = None
     is_active: Optional[bool] = True
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationUnderCoverTrapInfo(BaseModel):
     id: int
-    request_date: Optional[datetime] = None
+    undercover_id: Optional[int] = None
+    request_date: Optional[date] = None # Converted to date to match model more closely, though datetime works too
     number: Optional[str] = None
     officer: Optional[str] = None
     location: Optional[str] = None
     reason: Optional[str] = None
+    verified_by: Optional[str] = None
+    verification_date: Optional[date] = None
+    notes: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationFictitiousTrapInfo(BaseModel):
     id: int
-    request_date: Optional[datetime] = None
+    fictitious_id: Optional[int] = None
+    request_date: Optional[date] = None # Converted to date
     number: Optional[str] = None
     officer: Optional[str] = None
     location: Optional[str] = None
     reason: Optional[str] = None
+    notes: Optional[str] = None
     
     
     model_config = ConfigDict(from_attributes=True)
@@ -332,6 +342,7 @@ class VehicleRegistrationUnderCoverTrapInfoCreateBody(BaseModel):
     officer: Optional[str] = None
     location: Optional[str] = None
     reason: Optional[str] = None
+    notes: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -341,6 +352,7 @@ class VehicleRegistrationFictitiousTrapInfoCreateBody(BaseModel):
     officer: Optional[str] = None
     location: Optional[str] = None
     reason: Optional[str] = None
+    notes: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 
