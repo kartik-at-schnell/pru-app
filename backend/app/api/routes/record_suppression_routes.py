@@ -55,7 +55,7 @@ async def suppress_record_endpoint(
     payload: SuppressRecordRequest,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("create_suppression_request"))
+    permission_check = Depends(PermissionChecker("suppression:submit"))
 ):
     try:
         suppression = suppress_record(db, record_type, record_id, payload)
@@ -86,7 +86,7 @@ async def revoke_suppression_endpoint(
     payload: RevokeSuppressionRequest,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("reject_suppression"))
+    permission_check = Depends(PermissionChecker("suppression:edit"))
 ):
     try:
         suppression = revoke_suppression(db, suppression_id, payload)
@@ -117,7 +117,7 @@ async def get_history_endpoint(
     record_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_audit_logs"))
+    permission_check = Depends(PermissionChecker("suppression:audit_view"))
 ):
     try:
         history = get_suppression_history(db, record_type, record_id)
@@ -140,7 +140,7 @@ async def list_active_suppressions_endpoint(
     offset: int = Query(0, ge=0, description="Pagination offset"),
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_suppression_requests"))
+    permission_check = Depends(PermissionChecker("suppression:view_list"))
 ):
     try:
         result = get_active_suppressions(
@@ -167,7 +167,7 @@ async def check_suppression_endpoint(
     record_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_suppression_requests"))
+    permission_check = Depends(PermissionChecker("suppression:view_details"))
 ):
     try:
         suppression = get_suppression_for_record(db, record_type, record_id)
@@ -203,7 +203,7 @@ async def create_suppressed_vr_master_endpoint(
     payload: CreateSuppressedVRMasterRequest,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("create_suppression_request"))
+    permission_check = Depends(PermissionChecker("suppression:submit"))
 ):
     try:
         result = create_suppressed_vr_master(db, payload)
@@ -244,7 +244,7 @@ async def create_suppressed_dl_original_endpoint(
     payload: CreateSuppressedDLOriginalRequest,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("create_suppression_request"))
+    permission_check = Depends(PermissionChecker("suppression:submit"))
 ):
     try:
         result = create_suppressed_dl_original(db, payload)
@@ -280,7 +280,7 @@ def open_suppressed_record(
     suppression_id: int = Path(..., description="Suppression numeric id"),
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_suppression_requests"))
+    permission_check = Depends(PermissionChecker("suppression:view_details"))
 ):
     # 1) load suppression row
     suppression = db.query(RecordSuppressionRequest).filter(

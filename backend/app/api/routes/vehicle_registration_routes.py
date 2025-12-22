@@ -8,6 +8,8 @@ from app.crud.vehicle_registration_crud import (
     create_master_record,
     create_reciprocal_issued,
     create_reciprocal_received,
+    deactivate_reciprocal_issued,
+    deactivate_reciprocal_received,
     create_trap_info_fictitious,
     create_trap_info_undercover,
     create_undercover_record,
@@ -25,6 +27,7 @@ from app.crud.vehicle_registration_crud import (
     get_all_vehicles,
     get_contact,
     get_contacts_by_master,
+    get_master_by_id,
     get_reciprocal_issued,
     get_reciprocal_issued_by_id,
     get_reciprocal_issued_by_master,
@@ -39,7 +42,11 @@ from app.crud.vehicle_registration_crud import (
     update_reciprocal_received,
     update_trap_info_fictitious,
     update_trap_info_undercover,
-    update_vehicle_record
+    update_trap_info_fictitious,
+    update_trap_info_undercover,
+    update_vehicle_record,
+    update_contact,
+    deactivate_contact
 )
 
 from app.schemas.vehicle_registration_schema import(
@@ -61,12 +68,15 @@ from app.schemas.vehicle_registration_schema import(
     MasterCreateRequest,
     VehicleRegistrationUnderCoverTrapInfo,
     VehicleRegistrationUnderCoverTrapInfoCreateBody,
+    VehicleRegistrationMasterUpdate,
+    VehicleRegistrationUnderCoverUpdate,
+    VehicleRegistrationFictitiousUpdate,
 )
 from app.security import get_current_user
 
 from app.schemas.base_schema import ApiResponse
 from app.models import user_models
-from app.crud.driving_license_crud import delete_contact, update_contact
+from app.crud.driving_license_crud import delete_contact
 from app.rbac import PermissionChecker, RoleChecker
 
 router = APIRouter(prefix="/vehicle-registration", tags=["Vehicle Registration"])
@@ -81,16 +91,14 @@ def create_vehicle_record(
     record_type: str = Query(..., regex="^(master|undercover|fictitious)$"),
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("create_new_vr")),
-    payload: Union[
-        MasterCreateRequest,
-        UnderCoverCreateRequest,
-        FictitiousCreateRequest
-    ] = Body(...)
+    permission_check = Depends(PermissionChecker("vr:create")),
+    payload: dict = Body(...)
 ):
     try:
         if record_type == "master":
-            result = create_master_record(db, payload)
+            # Validate payload as Master
+            validated_payload = MasterCreateRequest(**payload)
+            result = create_master_record(db, validated_payload)
             data = VehicleRegistrationMasterResponse.model_validate(result)
             return ApiResponse(
                 status="success",
@@ -98,7 +106,8 @@ def create_vehicle_record(
                 data=data
             )
         elif record_type == "undercover":
-            result = create_undercover_record(db, payload)
+            validated_payload = UnderCoverCreateRequest(**payload)
+            result = create_undercover_record(db, validated_payload)
             data = VehicleRegistrationUnderCoverResponse.model_validate(result)
             return ApiResponse(
                 status="success",
@@ -106,7 +115,8 @@ def create_vehicle_record(
                 data=data
             )
         elif record_type == "fictitious":
-            result = create_fictitious_record(db, payload)
+            validated_payload = FictitiousCreateRequest(**payload)
+            result = create_fictitious_record(db, validated_payload)
             data = VehicleRegistrationFictitiousResponse.model_validate(result)
             return ApiResponse(
                 status="success",
@@ -133,8 +143,8 @@ def list_vehicles(
     approval_status: Optional[str] = Query(None, description="pending, approved, rejected, on_hold"),
     db: Session = Depends(get_db),
     # current_user: user_models.User = Depends(get_current_user)
-    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("view_vr_records")),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager","User")),
+    permission_check = Depends(PermissionChecker("vr:view_list")),
     
 ):
     try:
@@ -156,23 +166,82 @@ def list_vehicles(
 
 
 #update
-router.put("/{record_id}", response_model=ApiResponse[VehicleRegistrationMasterResponse])
+@router.put("/{record_id}", response_model=ApiResponse[Union[
+    VehicleRegistrationMasterResponse,
+    VehicleRegistrationUnderCoverResponse,
+    VehicleRegistrationFictitiousResponse
+]])
 def update_vehicle(
-    record_id: int,  # Changed from str to int
-    update_data: VehicleRegistrationMasterBase,
+    record_id: str,
+    record_type: str = Query("master", regex="^(master|undercover|fictitious)$"),
+    update_data: dict = Body(...),
     db: Session = Depends(get_db),
-    #current_user: user_models.User = Depends(get_current_user)
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("Edit VR Record" )),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
-    updated = update_vehicle_record(db, record_id, update_data)
-    if not updated:
-        raise HTTPException(status_code=404, detail="Vehicle record not found")
+    try:
+        # Choose schema based on record_type
+        if record_type == "undercover":
+            schema = VehicleRegistrationUnderCoverUpdate
+            resp_model = VehicleRegistrationUnderCoverResponse
+        elif record_type == "fictitious":
+            schema = VehicleRegistrationFictitiousUpdate
+            resp_model = VehicleRegistrationFictitiousResponse
+        else:
+            schema = VehicleRegistrationMasterUpdate
+            resp_model = VehicleRegistrationMasterResponse
+        
+        # Validate data
+        validated_data = schema.model_validate(update_data)
+        
+        updated = update_vehicle_record(db, record_id, validated_data, record_type=record_type)
+        if not updated:
+            raise HTTPException(status_code=404, detail=f"{record_type.capitalize()} record not found")
+        
+        data = resp_model.model_validate(updated)
+        return ApiResponse(
+            status="success",
+            message=f"{record_type.capitalize()} record {record_id} updated successfully",
+            data=data)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Update failed: {str(e)}")
     
-    data = VehicleRegistrationMasterResponse.model_validate(updated)
+
+@router.put("/undercover/{record_id}", response_model=ApiResponse[VehicleRegistrationUnderCoverResponse])
+def update_undercover_vehicle(
+    record_id: str,
+    update_data: VehicleRegistrationUnderCoverUpdate,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
+):
+    updated = update_vehicle_record(db, record_id, update_data, record_type="undercover")
+    if not updated:
+        raise HTTPException(status_code=404, detail="Undercover record not found")
+    
+    data = VehicleRegistrationUnderCoverResponse.model_validate(updated)
     return ApiResponse(
         status="success",
-        message=f"Record {record_id} updated successfully",
+        message=f"Undercover record {record_id} updated successfully",
+        data=data)
+    
+
+@router.put("/fictitious/{record_id}", response_model=ApiResponse[VehicleRegistrationFictitiousResponse])
+def update_fictitious_vehicle(
+    record_id: str,
+    update_data: VehicleRegistrationFictitiousUpdate,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
+):
+    updated = update_vehicle_record(db, record_id, update_data, record_type="fictitious")
+    if not updated:
+        raise HTTPException(status_code=404, detail="Fictitious record not found")
+    
+    data = VehicleRegistrationFictitiousResponse.model_validate(updated)
+    return ApiResponse(
+        status="success",
+        message=f"Fictitious record {record_id} updated successfully",
         data=data)
     
 
@@ -181,13 +250,42 @@ def update_vehicle(
 def get_master_record_details(master_id: str, db: Session = Depends(get_db), 
                               #current_user: user_models.User = Depends(get_current_user)
                                 current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-                                permission_check = Depends(PermissionChecker("view_vr_records")),
+                                permission_check = Depends(PermissionChecker("vr:view_details")),
                               
                               ):
     db_record = get_vehicle_master_details(db=db, master_id=master_id)
     if db_record is None:
         raise HTTPException(status_code=404, detail="Vehicle Master Record not found")
     return ApiResponse[VehicleRegistrationMasterDetails](data=db_record)
+
+# Get VIN by ID (RBAC with email)
+@router.get("/vin/{record_id}")
+def get_vin_by_id(
+    record_id: int,
+    email: str = Query(..., description="User email for verification"),
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+    permission_check = Depends(PermissionChecker("vr:view_details"))
+):
+    try:
+        master = get_master_by_id(db, record_id)
+        
+        # We could add specific logic for 'email' here if needed, 
+        # e.g., verifying it matches current_user or logging it. 
+        # For now, we accept it as requested for the definition.
+
+        return ApiResponse(
+            status="success",
+            data={"vehicle_id_number": master.vehicle_id_number}
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve VIN: {str(e)}"
+        )
+
 
 # get dropdown of masters
 @router.get("/masters/dropdown")
@@ -206,10 +304,11 @@ def get_masters_dropdown(
     summary="Create a new contact for a master record",
 )
 def create_vehicle_contact(
-    master_id: int,
+    master_id: str,
     payload: VehicleRegistrationContactCreateBody,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(get_current_user),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
         result = create_contact(db, master_id, payload)
@@ -239,9 +338,10 @@ def create_vehicle_contact(
     summary="Get all contacts for a master record",
 )
 def get_vehicle_contacts(
-    master_id: int,
+    master_id: str,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(get_current_user),
+    permission_check = Depends(PermissionChecker("vr:view_details")),
 ):
 
     try:
@@ -275,7 +375,8 @@ def get_vehicle_contacts(
 def get_single_contact(
     contact_id: int,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(get_current_user),
+    permission_check = Depends(PermissionChecker("vr:view_details")),
 ):
     try:
         contact = get_contact(db, contact_id)
@@ -307,7 +408,8 @@ def update_vehicle_contact(
     contact_id: int,
     payload: VehicleRegistrationContactCreateBody,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
         result = update_contact(db, contact_id, payload)
@@ -330,6 +432,35 @@ def update_vehicle_contact(
             detail=f"Failed to update contact: {str(e)}"
         )
 
+    
+    
+# Deactivate (Soft Delete equivalent)
+@router.put(
+    "/contacts/{contact_id}/deactivate",
+    response_model=ApiResponse[VehicleRegistrationContact],
+    summary="Deactivate a contact",
+)
+def deactivate_vehicle_contact(
+    contact_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
+    permission_check = Depends(PermissionChecker("vr:edit")), # Consistent with other endpoints
+):
+    try:
+        result = deactivate_contact(db, contact_id)
+        return ApiResponse(
+            status="success",
+            message=f"Contact {contact_id} deactivated successfully",
+            data=VehicleRegistrationContact.model_validate(result)
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to deactivate contact: {str(e)}"
+        )
+
 # delete
 @router.delete(
     "/contacts/{contact_id}",
@@ -341,7 +472,7 @@ def delete_vehicle_contact(
     db: Session = Depends(get_db),
     #current_user: user_models.User = Depends(get_current_user)
     current_user: user_models.User = Depends(RoleChecker("Admin")),
-    permission_check = Depends(PermissionChecker("edit_vr_record")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
 
@@ -373,7 +504,8 @@ def list_all_contacts(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum records to return"),
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(get_current_user),
+    permission_check = Depends(PermissionChecker("vr:view_list")),
 ):
     try:
 
@@ -404,7 +536,7 @@ def create_ri(
     payload: VehicleRegistrationReciprocalIssuedCreateBody,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("edit_vr_record")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
         result = create_reciprocal_issued(db, payload)
@@ -428,7 +560,7 @@ def create_ri(
     response_model=ApiResponse[List[VehicleRegistrationReciprocalIssued]],
 )
 def list_ri_for_master(
-    master_id: int,
+    master_id: str,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(get_current_user)
 ):
@@ -453,7 +585,7 @@ def get_ri(
     reciprocal_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_vr_records")),
+    permission_check = Depends(PermissionChecker("vr:view_details")),
 ):
     try:
         reciprocal = get_reciprocal_issued_by_id(db, reciprocal_id)
@@ -477,7 +609,7 @@ def update_ri(
     payload: VehicleRegistrationReciprocalIssuedCreateBody,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("edit_vr_record")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
         result = update_reciprocal_issued(db, reciprocal_id, payload)
@@ -492,6 +624,35 @@ def update_ri(
         )
 
 
+@router.put(
+    "/reciprocal-issued/{reciprocal_id}/deactivate",
+    response_model=ApiResponse[VehicleRegistrationReciprocalIssued],
+    summary="Deactivate a reciprocal issued record",
+)
+def deactivate_ri(
+    reciprocal_id: int,
+    email: str = Query(..., description="User email for verification"),
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
+):
+    try:
+        result = deactivate_reciprocal_issued(db, reciprocal_id)
+        data = VehicleRegistrationReciprocalIssued.model_validate(result)
+        return ApiResponse(
+            status="success",
+            message=f"Reciprocal Issued {reciprocal_id} deactivated successfully",
+            data=data
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to deactivate Reciprocal Issued: {str(e)}"
+        )
+
+
 @router.delete(
     "/reciprocal-issued/{reciprocal_id}",
     response_model=ApiResponse,
@@ -500,7 +661,7 @@ def delete_ri(
     reciprocal_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin")),
-    permission_check = Depends(PermissionChecker("edit_vr_record")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
         result = delete_reciprocal_issued(db, reciprocal_id)
@@ -523,7 +684,7 @@ def list_all_ri(
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_vr_records")),
+    permission_check = Depends(PermissionChecker("vr:view_list")),
 ):
     try:
         reciprocals = get_all_reciprocal_issued(db, skip=skip, limit=limit)
@@ -546,7 +707,7 @@ def create_rr(
     payload: VehicleRegistrationReciprocalReceivedCreateBody,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("edit_vr_record")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
         result = create_reciprocal_received(db, payload)
@@ -570,10 +731,10 @@ def create_rr(
     response_model=ApiResponse[List[VehicleRegistrationReciprocalReceived]]
 )
 def list_rr_for_master(
-    master_id: int,
+    master_id: str,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_vr_records")),
+    permission_check = Depends(PermissionChecker("vr:view_details")),
 ):
     try:
         reciprocals = get_reciprocal_received_by_master(db, master_id)
@@ -596,7 +757,7 @@ def get_rr(
     reciprocal_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_vr_records")),
+    permission_check = Depends(PermissionChecker("vr:view_details")),
 ):
     try:
         reciprocal = get_reciprocal_received(db, reciprocal_id)
@@ -620,7 +781,7 @@ def update_rr(
     payload: VehicleRegistrationReciprocalReceivedCreateBody,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("edit_vr_record")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
         result = update_reciprocal_received(db, reciprocal_id, payload)
@@ -643,7 +804,7 @@ def delete_rr(
     reciprocal_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin")),
-    permission_check = Depends(PermissionChecker("edit_vr_record")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
         result = delete_reciprocal_received(db, reciprocal_id)
@@ -656,6 +817,33 @@ def delete_rr(
             detail=f"Failed to delete Reciprocal Received: {str(e)}"
         )
 
+@router.put(
+    "/reciprocal-received/{reciprocal_id}/deactivate",
+    response_model=ApiResponse[VehicleRegistrationReciprocalReceived],
+)
+def deactivate_rr(
+    reciprocal_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
+):
+    try:
+        result = deactivate_reciprocal_received(db, reciprocal_id)
+        data = VehicleRegistrationReciprocalReceived.model_validate(result)
+        return ApiResponse(
+            status="success",
+            message="Reciprocal Received record deactivated successfully",
+            data=data
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to deactivate Reciprocal Received: {str(e)}"
+        )
+
+
 # get all
 @router.get(
     "/reciprocal-received",
@@ -666,7 +854,7 @@ def list_all_rr(
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_vr_records")),
+    permission_check = Depends(PermissionChecker("vr:view_list")),
 ):
     try:
         reciprocals = get_all_reciprocal_received(db, skip=skip, limit=limit)
@@ -690,7 +878,7 @@ def create_ti_uc(
     payload: VehicleRegistrationUnderCoverTrapInfoCreateBody,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("edit_vr_record")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
         result = create_trap_info_undercover(db, undercover_id, payload)
@@ -717,7 +905,7 @@ def list_ti_uc_for_undercover(
     undercover_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_vr_records")),
+    permission_check = Depends(PermissionChecker("vr:view_details")),
 ):
     try:
         trap_infos = get_trap_info_undercover_by_uc(db, undercover_id)
@@ -740,7 +928,7 @@ def get_ti_uc(
     trap_info_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_vr_records")),
+    permission_check = Depends(PermissionChecker("vr:view_details")),
 ):
     try:
         trap_info = get_trap_info_undercover(db, trap_info_id)
@@ -764,7 +952,7 @@ def update_ti_uc(
     payload: VehicleRegistrationUnderCoverTrapInfoCreateBody,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("edit_vr_record")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
         result = update_trap_info_undercover(db, trap_info_id, payload)
@@ -787,7 +975,7 @@ def delete_ti_uc(
     trap_info_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin")),
-    permission_check = Depends(PermissionChecker("edit_vr_record")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
         result = delete_trap_info_undercover(db, trap_info_id)
@@ -810,7 +998,7 @@ def list_all_ti_uc(
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor/Manager", "Supervisor / Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_vr_records")),
+    permission_check = Depends(PermissionChecker("vr:view_list")),
 ):
     try:
         trap_infos = get_all_trap_info_undercover(db, skip=skip, limit=limit)
@@ -834,7 +1022,7 @@ def create_ti_fc(
     payload: VehicleRegistrationFictitiousTrapInfoCreateBody,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("edit_vr_record")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
         result = create_trap_info_fictitious(db, fictitious_id, payload)
@@ -861,7 +1049,7 @@ def list_ti_fc_for_fictitious(
     fictitious_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_vr_records")),
+    permission_check = Depends(PermissionChecker("vr:view_details")),
 ):
     try:
         trap_infos = get_trap_info_fictitious_by_fc(db, fictitious_id)
@@ -884,7 +1072,7 @@ def get_ti_fc(
     trap_info_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_vr_records")),
+    permission_check = Depends(PermissionChecker("vr:view_details")),
 ):
     try:
         trap_info = get_trap_info_fictitious(db, trap_info_id)
@@ -908,7 +1096,7 @@ def update_ti_fc(
     payload: VehicleRegistrationFictitiousTrapInfoCreateBody,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager")),
-    permission_check = Depends(PermissionChecker("edit_vr_record")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
         result = update_trap_info_fictitious(db, trap_info_id, payload)
@@ -931,7 +1119,7 @@ def delete_ti_fc(
     trap_info_id: int,
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin")),
-    permission_check = Depends(PermissionChecker("edit_vr_record")),
+    permission_check = Depends(PermissionChecker("vr:edit")),
 ):
     try:
         result = delete_trap_info_fictitious(db, trap_info_id)
@@ -954,7 +1142,7 @@ def list_all_ti_fc(
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
     current_user: user_models.User = Depends(RoleChecker("Admin", "Supervisor", "Manager", "User")),
-    permission_check = Depends(PermissionChecker("view_vr_records")),
+    permission_check = Depends(PermissionChecker("vr:view_list")),
 ):
     try:
         trap_infos = get_all_trap_info_fictitious(db, skip=skip, limit=limit)

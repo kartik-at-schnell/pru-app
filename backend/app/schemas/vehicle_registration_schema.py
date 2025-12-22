@@ -1,7 +1,7 @@
 from decimal import Decimal
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime, date
-from typing import Optional, List
+from typing import Optional, List, Union
 from pydantic import Field, field_validator
 from sqlalchemy import func
 
@@ -11,6 +11,7 @@ class Config:
 # child tables
 class VehicleRegistrationContact(BaseModel):
     id: int
+    master_record_id: Optional[int] = None
     contact_name: Optional[str] = None
     department: Optional[str] = None
     email: Optional[str] = None
@@ -20,6 +21,7 @@ class VehicleRegistrationContact(BaseModel):
     alt_contact_2: Optional[str] = None
     alt_contact_3: Optional[str] = None
     alt_contact_4: Optional[str] = None
+    is_active: Optional[bool] = True
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -34,7 +36,10 @@ class VehicleRegistrationReciprocalIssued(BaseModel):
     cancellation_date: Optional[date] = None
     sticker_number: Optional[str] = None
     issuing_authority: Optional[str] = None
-    agreement_issued_id: Optional[str] = None
+    agreement_issued_id: Optional[int] = None
+    is_active: Optional[bool] = True
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -47,28 +52,40 @@ class VehicleRegistrationReciprocalReceived(BaseModel):
     recipient_state: Optional[str] = None
     year_of_renewal: Optional[int] = None
     cancellation_date: Optional[date] = None
+    received_date: Optional[date] = None
+    expiry_date: Optional[date] = None
     sticker_number: Optional[str] = None
     issuing_authority: Optional[str] = None
+    agreement_received_id: Optional[int] = None
+    is_active: Optional[bool] = True
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationUnderCoverTrapInfo(BaseModel):
     id: int
-    request_date: Optional[datetime] = None
+    undercover_id: Optional[int] = None
+    request_date: Optional[date] = None # Converted to date to match model more closely, though datetime works too
     number: Optional[str] = None
     officer: Optional[str] = None
     location: Optional[str] = None
     reason: Optional[str] = None
+    verified_by: Optional[str] = None
+    verification_date: Optional[date] = None
+    notes: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationFictitiousTrapInfo(BaseModel):
     id: int
-    request_date: Optional[datetime] = None
+    fictitious_id: Optional[int] = None
+    request_date: Optional[date] = None # Converted to date
     number: Optional[str] = None
     officer: Optional[str] = None
     location: Optional[str] = None
     reason: Optional[str] = None
+    notes: Optional[str] = None
     
     
     model_config = ConfigDict(from_attributes=True)
@@ -103,6 +120,7 @@ class VehicleRegistrationFictitious(BaseModel):
 class VehicleRegistrationMasterBase(BaseModel):
 
     id: int = Field(alias="id")
+    record_id: str = Field(alias="record_id")
     title: Optional[str] = None
     parent: str = Field(default="Vehicle Registration")
     list: str = Field(default="Master Record")
@@ -125,6 +143,7 @@ class VehicleRegistrationMasterBase(BaseModel):
 
 
     id: int = Field(alias="id")
+    record_id: str = Field(alias="record_id")
     title: Optional[str] = None
     parent: str = Field(default="Vehicle Registration")
     list: str = Field(default="Master Record")
@@ -144,6 +163,46 @@ class VehicleRegistrationMasterBase(BaseModel):
         vin = str(info.data.get('id', 'N/A')).zfill(4) if info.data.get('id') else 'N/A'
         status = info.data.get('approval_status', 'Pending').capitalize()
         return f"{vin} • {status}"
+
+class VehicleRegistrationMasterUpdate(BaseModel):
+    license_number: Optional[str] = None
+    vehicle_id_number: Optional[str] = None
+    registered_owner: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    make: Optional[str] = None
+    model: Optional[str] = None
+    year_model: Optional[int] = None
+    year_sold: Optional[int] = None
+    body_type: Optional[str] = None
+    type_license: Optional[str] = None
+    type_vehicle: Optional[str] = None
+    # category: Optional[str] = None
+    active_status: Optional[bool] = None
+    expiration_date: Optional[date] = None
+    date_issued: Optional[date] = None
+    date_received: Optional[date] = None
+    date_fee_received: Optional[date] = None
+    amount_paid: Optional[float] = None
+    amount_due: Optional[float] = None
+    amount_received: Optional[float] = None
+    use_tax: Optional[float] = None
+    sticker_issued: Optional[str] = None
+    sticker_numbers: Optional[str] = None
+    
+    cert_type: Optional[str] = None
+    mp: Optional[str] = None
+    mo: Optional[str] = None
+    axl: Optional[str] = None
+    wc: Optional[str] = None
+    cc_alco: Optional[str] = None
+    
+    approval_status: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
 
 # when we CREATE a new record
 class VehicleRegistrationMasterCreate(BaseModel):
@@ -213,6 +272,15 @@ class VehicleRegistrationFictitiousCreateBody(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationContactCreateBody(BaseModel):
+    master_record_id: Optional[Union[int, str]] = None
+    
+    @field_validator('master_record_id', mode='before')
+    @classmethod
+    def blank_string_to_none(cls, v):
+        if v == "":
+            return None
+        return v
+
     contact_name: Optional[str] = None
     department: Optional[str] = None
     email: Optional[str] = None
@@ -222,35 +290,49 @@ class VehicleRegistrationContactCreateBody(BaseModel):
     alt_contact_2: Optional[str] = None
     alt_contact_3: Optional[str] = None
     alt_contact_4: Optional[str] = None
+    is_active: Optional[bool] = True
 
     model_config = ConfigDict(from_attributes=True)
 
 class VehicleRegistrationReciprocalIssuedCreateBody(BaseModel):
     master_record_id: Optional[int] = None
     description: Optional[str] = None
-    license_number: Optional[str] = None
+    license_plate: Optional[str] = None
     issuing_state: Optional[str] = None
     recipient_state: Optional[str] = None
     year_of_renewal: Optional[int] = None
     cancellation_date: Optional[date] = None
     sticker_number: Optional[str] = None
     issuing_authority: Optional[str] = None
-    agreement_issued_id: Optional[str] = None
+    agreement_issued_id: Optional[int] = None
+    is_active: Optional[bool] = True
 
 
     model_config = ConfigDict(from_attributes=True)
+    
+
 
 class VehicleRegistrationReciprocalReceivedCreateBody(BaseModel):
     master_record_id: Optional[int] = None
+    agreement_received_id: Optional[int] = None
     description: Optional[str] = None
     license_number: Optional[str] = None
     issuing_state: Optional[str] = None
     recipient_state: Optional[str] = None
     year_of_renewal: Optional[int] = None
     cancellation_date: Optional[date] = None
-    recieved_date: Optional[date] = None
+    received_date: Optional[date] = None
+    expiry_date: Optional[date] = None
     sticker_number: Optional[str] = None
     issuing_authority: Optional[str] = None
+    is_active: Optional[bool] = True
+
+    @field_validator('cancellation_date', 'received_date', 'expiry_date', mode='before')
+    @classmethod
+    def empty_string_to_none(cls, v):
+        if v == "":
+            return None
+        return v
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -260,6 +342,7 @@ class VehicleRegistrationUnderCoverTrapInfoCreateBody(BaseModel):
     officer: Optional[str] = None
     location: Optional[str] = None
     reason: Optional[str] = None
+    notes: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -269,6 +352,7 @@ class VehicleRegistrationFictitiousTrapInfoCreateBody(BaseModel):
     officer: Optional[str] = None
     location: Optional[str] = None
     reason: Optional[str] = None
+    notes: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -285,6 +369,7 @@ class BaseVehicleRegistrationCreate(BaseModel):
     zip_code: Optional[str] = None
     make: Optional[str] = None
     year_model: Optional[int] = None
+    year_sold: Optional[int] = None
     active_status: Optional[bool] = True
     expiration_date: Optional[date] = None
     date_issued : Optional[date] = None
@@ -320,6 +405,7 @@ class UnderCoverCreateRequest(BaseVehicleRegistrationCreate):
     date_fee_received: Optional[date] = func.now()
     amount_paid: Optional[float] = None
     officer: Optional[str] = None
+    cert_type: Optional[str] = None
 
 class FictitiousCreateRequest(BaseVehicleRegistrationCreate):
     master_record_id: int
@@ -328,21 +414,23 @@ class FictitiousCreateRequest(BaseVehicleRegistrationCreate):
     amount_received: Optional[float] = None
     class_type: Optional[str] = None
     type_license: Optional[str] = None
+    type_vehicle: Optional[str] = None
     expiration_date: Optional[date] = None
     date_fee_received: Optional[date] = func.now()
     amount_paid: Optional[float] = None
     officer: Optional[str] = None
+    confidential_flag: Optional[str] = "No"
 
 
 
 class MasterDropdownResponse(BaseModel):
-    id: int
+    id: str
     vehicle_id_number: str
     registered_owner: str
 
 # bulk operations request schema
 class BulkActionRequest(BaseModel):
-    record_ids: List[int]  # Array of Master record primary keys
+    record_ids: List[str]  # Array of Master record primary keys (record_id)
     
     class Config:
         from_attributes = True
@@ -350,7 +438,7 @@ class BulkActionRequest(BaseModel):
 class BulkActionResponse(BaseModel):
     success_count: int
     failed_count: int
-    failed_ids: List[int] = []
+    failed_ids: List[str] = []
     message: str
     
     class Config:
@@ -358,6 +446,7 @@ class BulkActionResponse(BaseModel):
 
 class VehicleRegistrationResponse(BaseModel):
     id: int
+    record_id: str
     license_number: str
     vehicle_id_number: str
     active_status: bool
@@ -374,19 +463,21 @@ class VehicleRegistrationResponse(BaseModel):
     model: Optional[str] = None
     body_type: Optional[str] = None
     category: Optional[str] = None
+    year_sold: Optional[int] = None
+    cert_type: Optional[str] = None
     # document_id = Optional[int] = None
     error_text: Optional[str] = None
 
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    date_recieved: Optional[date] = None
+    date_received: Optional[date] = None
     date_issued: Optional[date] = None
     expiration_date: Optional[date] = None
-    date_fee_recieved: Optional[date] = None
+    date_fee_received: Optional[date] = None
     amount_paid: Optional[Decimal] = None
     amount_due: Optional[Decimal] = None
-    amount_recieved: Optional[Decimal] = None
-    use_tax: Optional[int] = None
+    amount_received: Optional[Decimal] = None
+    use_tax: Optional[float] = None
     sticker_issued: Optional[str] = None
     sticker_numbers: Optional[str] = None
     created_by: Optional[str] = None
@@ -411,6 +502,7 @@ class VehicleRegistrationUnderCoverResponse(VehicleRegistrationResponse):
     master_record_id : Optional[int] = None
     officer: Optional[str] = None
     active_status: Optional[bool]
+    cert_type: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -422,7 +514,76 @@ class VehicleRegistrationFictitiousResponse(VehicleRegistrationResponse):
     master_record_id : Optional[int] = None
     officer: Optional[str] = None
     active_status: Optional[bool]
+    confidential_flag: Optional[str] = None
     
+    class Config:
+        from_attributes = True
+
+
+class VehicleRegistrationUnderCoverUpdate(BaseModel):
+    license_number: Optional[str] = None
+    vehicle_id_number: Optional[str] = None
+    registered_owner: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    make: Optional[str] = None
+    model: Optional[str] = None
+    year_model: Optional[int] = None
+    year_sold: Optional[int] = None
+    class_type: Optional[str] = None
+    type_license: Optional[str] = None
+    expiration_date: Optional[date] = None
+    date_issued: Optional[date] = None
+    date_fee_received: Optional[date] = None
+    amount_paid: Optional[float] = None
+    active_status: Optional[bool] = None
+    officer: Optional[str] = None
+    cert_type: Optional[str] = None
+    sticker_numbers: Optional[str] = None
+    sticker_issued: Optional[str] = None
+    use_tax: Optional[float] = None
+    amount_received: Optional[float] = None
+    amount_due: Optional[float] = None
+    date_received: Optional[date] = None
+
+    class Config:
+        from_attributes = True
+
+
+class VehicleRegistrationFictitiousUpdate(BaseModel):
+    license_number: Optional[str] = None
+    vehicle_id_number: Optional[str] = None
+    registered_owner: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    make: Optional[str] = None
+    model: Optional[str] = None
+    year_model: Optional[int] = None
+    year_sold: Optional[int] = None
+    vlp_class: Optional[str] = None
+    amount_due: Optional[float] = None
+    amount_received: Optional[float] = None
+    active_status: Optional[bool] = None
+    officer: Optional[str] = None
+    confidential_flag: Optional[str] = None
+    sticker_numbers: Optional[str] = None
+    sticker_issued: Optional[str] = None
+    use_tax: Optional[float] = None
+    amount_paid: Optional[float] = None
+    date_issued: Optional[date] = None
+    date_received: Optional[date] = None
+    date_fee_received: Optional[date] = None
+    expiration_date: Optional[date] = None
+    cert_type: Optional[str] = None
+    type_license: Optional[str] = None
+    type_vehicle: Optional[str] = None
+    body_type: Optional[str] = None
+    category: Optional[str] = None
+
     class Config:
         from_attributes = True
 

@@ -17,6 +17,7 @@ from app.api.routes import record_suppression_routes
 from app.api.routes import admin_routes
 from app.api.routes import agency_routes
 from app.models import user_models
+from app.temp.abbyy_app.main import app as abbyy_app
 
 
 app = FastAPI()
@@ -35,6 +36,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# temp abbyy routes
+app.mount("/abbyy", abbyy_app)
 
 router = APIRouter(prefix="/api", dependencies=[Depends(get_current_user)])
 

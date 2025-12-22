@@ -7,6 +7,7 @@ class VehicleRegistrationMaster(BaseModel):
     __tablename__ = "vehicle_registration_master"
 
     id = Column(Integer, primary_key=True, index=True, nullable=False)
+    record_id = Column(String(50), unique=True, index=True, nullable=False)
     license_number = Column(String(20), unique=True, index=True)
     exempted_license_plate = Column(String(50))
     vehicle_id_number = Column(String(20), index=True)
@@ -54,11 +55,15 @@ class VehicleRegistrationMaster(BaseModel):
     cc_alco = Column(String(50))
     type_vehicle_use = Column(String(50))
 
+
     is_suppressed = Column(Boolean, default=False, index=True)
- 
-    contacts = relationship("VehicleRegistrationContact", back_populates="master_record")
-    reciprocal_issued = relationship("VehicleRegistrationReciprocalIssued", back_populates="master_record", cascade="save-update, merge", passive_deletes=True,)
-    reciprocal_received = relationship("VehicleRegistrationReciprocalReceived", back_populates="master_record", cascade="save-update, merge", passive_deletes=True,)
+
+    contacts = relationship(
+        "VehicleRegistrationContact", 
+        primaryjoin="VehicleRegistrationMaster.id == VehicleRegistrationContact.master_record_id",
+        foreign_keys="[VehicleRegistrationContact.master_record_id]"
+    )
+    # Reciprocal relationships removed as requested/unused to avoid join issues
     undercover_records = relationship("VehicleRegistrationUnderCover", back_populates="master_record", cascade="all, delete-orphan")
     fictitious_records = relationship("VehicleRegistrationFictitious", back_populates="master_record", cascade="all, delete-orphan")
  
@@ -115,9 +120,14 @@ class VehicleRegistrationUnderCover(BaseModel):
     active_status = Column(Boolean, default=True)
     error_text = Column(Text)
     description = Column(Text)
+    cert_type = Column(String(100))
 
     is_suppressed = Column(Boolean, default=False, index=True)
  
+    @property
+    def record_id(self):
+        return self.master_record.record_id if self.master_record else None
+
     master_record = relationship("VehicleRegistrationMaster", back_populates="undercover_records")
     trap_info = relationship("VehicleRegistrationUnderCoverTrapInfo", back_populates="undercover_record", cascade="all, delete-orphan")
  
@@ -131,6 +141,7 @@ class VehicleRegistrationFictitious(BaseModel):
     license_number = Column(String(9), index=True, nullable=False)
     vehicle_id_number = Column(String(17), index=True)
     registered_owner = Column(String(200), nullable=False)
+    confidential_flag = Column(String(50), default="No")
  
     address = Column(Text)
     city = Column(String(100))
@@ -148,6 +159,7 @@ class VehicleRegistrationFictitious(BaseModel):
  
     year_sold = Column(Integer)
     date_issued = Column(Date)
+    date_received = Column(Date)
     expiration_date = Column(Date)
     date_fee_received = Column(Date)    
     amount_paid = Column(Numeric(10, 2))                
@@ -172,8 +184,12 @@ class VehicleRegistrationFictitious(BaseModel):
     error_text = Column(Text)
     description = Column(Text)
 
-    is_suppressed = Column(Boolean, default=False, index=True)                        
+    is_suppressed = Column(Boolean, default=False, index=True)
  
+    @property
+    def record_id(self):
+        return self.master_record.record_id if self.master_record else None
+
     master_record = relationship("VehicleRegistrationMaster", back_populates="fictitious_records")
     trap_info = relationship("VehicleRegistrationFictitiousTrapInfo", back_populates="fictitious_record", cascade="all, delete-orphan")
  
@@ -182,7 +198,7 @@ class VehicleRegistrationContact(BaseModel):
     __tablename__ = "vehicle_registration_contacts"
  
     id = Column(Integer, primary_key=True, index=True)
-    master_record_id = Column(Integer, ForeignKey("vehicle_registration_master.id"), nullable=False)
+    master_record_id = Column(Integer, nullable=True)
     
     contact_name = Column(String(200))
     department = Column(String(100))
@@ -193,15 +209,17 @@ class VehicleRegistrationContact(BaseModel):
     alt_contact_2 = Column(String(200))
     alt_contact_3 = Column(String(200))
     alt_contact_4 = Column(String(200))
+    is_active = Column(Boolean, default=True)
  
-    master_record = relationship("VehicleRegistrationMaster", back_populates="contacts")
+    # Unidirectional relationship: Contact does not ideally need to know about Master object for "simple crud"
+    # Logic is handled via integer ID only.
 
  
 class VehicleRegistrationReciprocalIssued(BaseModel):
     __tablename__ = "vehicle_registration_reciprocal_issued"
  
     id = Column(Integer, primary_key=True, index=True)
-    master_record_id = Column(Integer, ForeignKey("vehicle_registration_master.id"), nullable=True)
+    master_record_id = Column(Integer, nullable=True)
  
     description = Column(Text)
     license_plate = Column(String(20))
@@ -211,19 +229,27 @@ class VehicleRegistrationReciprocalIssued(BaseModel):
     sticker_number = Column(String(50))
  
     issuing_authority = Column(String(100))
-    agreement_issued_id = Column(String(100))
+    agreement_issued_id = Column(Integer)
 
     issuing_state = Column(String(100))
     recipient_state = Column(String(100))
+    is_active = Column(Boolean, default=True)
  
-    master_record = relationship("VehicleRegistrationMaster", back_populates="reciprocal_issued", passive_deletes=True)
+    # Unidirectional relationship to Master (Master doesn't track this back)
+    master_record = relationship(
+        "VehicleRegistrationMaster",
+        primaryjoin="VehicleRegistrationReciprocalIssued.master_record_id == VehicleRegistrationMaster.id",
+        passive_deletes=True, 
+        foreign_keys=[master_record_id]
+    )
 
  
 class VehicleRegistrationReciprocalReceived(BaseModel):
     __tablename__ = "vehicle_registration_reciprocal_received"
  
     id = Column(Integer, primary_key=True, index=True)
-    master_record_id = Column(Integer, ForeignKey("vehicle_registration_master.id"), nullable=True)
+    master_record_id = Column(Integer, nullable=True)
+    is_active = Column(Boolean, default=True)
  
     registered_owner = Column(String(50))
     owner_address = Column(String(100))
@@ -233,14 +259,21 @@ class VehicleRegistrationReciprocalReceived(BaseModel):
  
     year_of_renewal = Column(Integer)
     cancellation_date = Column(Date)
-    recieved_date = Column(Date)
+    received_date = Column(Date)
     expiry_date = Column(Date)
  
     issuing_authority = Column(String(100))
+    agreement_received_id = Column(Integer)
     issuing_state = Column(String(100))
     recipient_state = Column(String(100))
  
-    master_record = relationship("VehicleRegistrationMaster", back_populates="reciprocal_received", passive_deletes=True)
+    # Unidirectional relationship to Master
+    master_record = relationship(
+        "VehicleRegistrationMaster",
+        primaryjoin="VehicleRegistrationReciprocalReceived.master_record_id == VehicleRegistrationMaster.id",
+        passive_deletes=True, 
+        foreign_keys=[master_record_id]
+    )
 
  
 class VehicleRegistrationFictitiousTrapInfo(BaseModel):
@@ -254,6 +287,7 @@ class VehicleRegistrationFictitiousTrapInfo(BaseModel):
     officer = Column(String(100))
     location = Column(String(100))
     reason = Column(String(500))
+    notes = Column(Text)
 
     fictitious_record = relationship("VehicleRegistrationFictitious", back_populates="trap_info")
 
@@ -272,5 +306,6 @@ class VehicleRegistrationUnderCoverTrapInfo(BaseModel):
  
     verified_by = Column(String(100))
     verification_date = Column(Date)
+    notes = Column(Text)
  
     undercover_record = relationship("VehicleRegistrationUnderCover", back_populates="trap_info")
