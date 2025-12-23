@@ -127,6 +127,26 @@ async def get_current_user(
         default_role = db.query(Role).filter(Role.name == "User").first()
         if default_role:
             transient_user.roles.append(default_role)
+
+    # 7. Persist the user to generate an ID
+    # Must provide a password hash constraint
+    # Using a pre-computed or dummy hash to avoid 'password too long' bcryt errors in some envs
+    transient_user.hashed_password = "dummy_safe_hash_value"
+    
+    try:
+        db.add(transient_user)
+        db.commit()
+        db.refresh(transient_user)
+    except Exception:
+        db.rollback()
+        # Fallback: User might have been created by another request concurrently
+        # or earlier check failed for some reason.
+        existing_user = user_crud.get_user_by_email(db, email=target_email)
+        if existing_user:
+            return existing_user
+        else:
+             # Real error 
+             raise HTTPException(status_code=500, detail="Failed to create/retrieve user record")
     
     return transient_user
 
