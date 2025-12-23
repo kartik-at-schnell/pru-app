@@ -36,7 +36,7 @@ def suppress_record(
     if hasattr(record, 'is_suppressed') and record.is_suppressed:
         raise HTTPException(
             status_code=400,
-            detail=f"Record {record_type}#{record_id} already suppressed"
+            detail=f"Record from {record_type} with record {record_id} already suppressed"
         )
 
     suppression = RecordSuppressionRequest(
@@ -46,7 +46,16 @@ def suppress_record(
         suppressed_at=datetime.utcnow(),
         status="active",
         revoked_at=None,
-        revoke_reason=None
+        revoke_reason=None,
+        owner_name=getattr(payload, 'owner_name', None),
+        suppression_justification=getattr(payload, 'suppression_justification', None),
+        confidentiality_level=getattr(payload, 'confidentiality_level', None),
+        requested_by=getattr(payload, 'requested_by', None),
+        requestor_email=getattr(payload, 'requestor_email', None),
+        requestor_phone=getattr(payload, 'requestor_phone', None),
+        department=getattr(payload, 'department', None),
+        assigned_unit=getattr(payload, 'assigned_unit', None),
+        created_by=payload.requested_by,
     )
 
     db.add(suppression)
@@ -118,40 +127,99 @@ def get_suppression_history(
     )
 
 
+# def get_active_suppressions(
+#     db: Session,
+#     record_type: Optional[str] = None,
+#     limit: int = 50,
+#     offset: int = 0
+# ) -> ActiveSuppressionsListAllResponse:
+    
+#     query = db.query(RecordSuppressionRequest).filter(
+#         RecordSuppressionRequest.status == "active"
+#     )
+    
+#     if record_type:
+#         query = query.filter(RecordSuppressionRequest.record_type == record_type)
+    
+#     total = query.count()
+#     entries = query.order_by(
+#         RecordSuppressionRequest.suppressed_at.desc()
+#     ).offset(offset).limit(limit).all()
+    
+#     suppressions = []
+#     for entry in entries:
+#         days_suppressed = (datetime.utcnow() - entry.suppressed_at.replace(tzinfo=None)).days
+#         suppressions.append(ActiveSuppressionListResponse(
+#             suppression_id=entry.id,
+#             record_type=entry.record_type,
+#             record_id=entry.record_id,
+#             reason=entry.reason,
+#             suppressed_at=entry.suppressed_at,
+#             days_suppressed=days_suppressed,
+#             owner_name=entry.owner_name,
+#             confidentiality_level=entry.confidentiality_level,
+#             assigned_unit=entry.assigned_unit,
+#             status=entry.status
+#         ))
+    
+#     return ActiveSuppressionsListAllResponse(
+#         total_active=total,
+#         suppressions=suppressions
+#     )
+
 def get_active_suppressions(
     db: Session,
     record_type: Optional[str] = None,
     limit: int = 50,
-    offset: int = 0
+    offset: int = 0,
 ) -> ActiveSuppressionsListAllResponse:
-    
     query = db.query(RecordSuppressionRequest).filter(
         RecordSuppressionRequest.status == "active"
     )
-
     if record_type:
         query = query.filter(RecordSuppressionRequest.record_type == record_type)
 
     total = query.count()
-    entries = query.order_by(
-        RecordSuppressionRequest.suppressed_at.desc()
-    ).offset(offset).limit(limit).all()
+    entries = (
+        query.order_by(RecordSuppressionRequest.suppressed_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
 
     suppressions = []
     for entry in entries:
         days_suppressed = (datetime.utcnow() - entry.suppressed_at.replace(tzinfo=None)).days
-        suppressions.append(ActiveSuppressionListResponse(
-            suppression_id=entry.id,
-            record_type=entry.record_type,
-            record_id=entry.record_id,
-            reason=entry.reason,
-            suppressed_at=entry.suppressed_at,
-            days_suppressed=days_suppressed
-        ))
+
+        # NEW: load native record (VR / DL / etc.)
+        record_obj = _get_record_by_type(db, entry.record_type, entry.record_id)
+        if record_obj is not None:
+            record_detail = {
+                c.name: getattr(record_obj, c.name)
+                for c in record_obj.__table__.columns
+            }
+        else:
+            record_detail = None
+
+        suppressions.append(
+            ActiveSuppressionListResponse(
+                suppression_id=entry.id,
+                record_type=entry.record_type,
+                record_id=entry.record_id,
+                reason=entry.reason,
+                suppressed_at=entry.suppressed_at,
+                days_suppressed=days_suppressed,
+                owner_name=getattr(entry, "owner_name", None),
+                confidentiality_level=getattr(entry, "confidentiality_level", None),
+                assigned_unit=getattr(entry, "assigned_unit", None),
+                status=entry.status,
+                record_detail=record_detail,
+            )
+        )
 
     return ActiveSuppressionsListAllResponse(
         total_active=total,
-        suppressions=suppressions
+        suppressions=suppressions,
     )
 
 
@@ -218,7 +286,7 @@ def _get_record_by_type(db: Session, record_type: str, record_id: int):
 
 def create_suppressed_vr_master(
     db: Session,
-    payload: MasterCreateRequest
+    payload: MasterCreateRequest 
 ):
     
     suppression_reason = payload.suppression_reason
