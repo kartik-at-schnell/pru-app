@@ -12,6 +12,7 @@ from app.schemas.action_schema import ActionRequest, ActionResponse, ActionLogOu
 from app.database import get_db
 from app.models import user_models
 from app.security import get_current_user
+from app.rbac import RoleChecker
 from app.crud.vehicle_registration_crud import (
     bulk_active, bulk_approve, bulk_inactive, bulk_reject, bulk_set_on_hold, 
     mark_active, mark_inactive,
@@ -30,7 +31,7 @@ def perform_action(
     action_data: ActionRequest,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
 ):
     try:
         # extract client IP address for audit logging
@@ -57,7 +58,8 @@ def perform_action(
 @router.get("/{record_id}/history", response_model=List[ActionLogOut])
 def get_action_history(record_id: str,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)):
+    #current_user: user_models.User = Depends(get_current_user)):
+    current_user: user_models.User = Depends(RoleChecker("Admin"))):
     try:
         history = get_record_action_history(db, record_id)
         return [
@@ -82,7 +84,7 @@ def get_action_history(record_id: str,
 def approve_record(record_id: str,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)):
+    current_user: user_models.User = Depends(RoleChecker("Admin"))):
     action_data = ActionRequest(
         record_id=record_id,
         record_table="vehicle_registration_master",
@@ -96,7 +98,7 @@ def approve_record(record_id: str,
 def reject_record(record_id: str,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)):
+    current_user: user_models.User = Depends(RoleChecker("Admin"))):
     action_data = ActionRequest(
         record_id=record_id,
         record_table="vehicle_registration_master",
@@ -110,7 +112,7 @@ def reject_record(record_id: str,
 def hold_record(record_id: str,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)):
+    current_user: user_models.User = Depends(RoleChecker("Admin"))):
     action_data = ActionRequest(
         record_id=record_id,
         record_table="vehicle_registration_master",
@@ -120,11 +122,11 @@ def hold_record(record_id: str,
     return perform_action(action_data, request, db, current_user)
 
 # mark inactive
-@router.get("/{record_id}/inactive")
+@router.post("/{record_id}/inactive")
 async def mark_inactive_route(
     record_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
 ):
     record = mark_inactive(db, record_id)
     if not record:
@@ -136,7 +138,7 @@ async def mark_inactive_route(
 async def mark_active_route(
     record_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
 ):
     record = mark_active(db, record_id)
     if not record:
@@ -149,7 +151,7 @@ async def mark_active_route(
 async def mark_undercover_inactive_route(
     record_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
 ):
     record = mark_undercover_inactive(db, record_id)
     if not record:
@@ -161,7 +163,7 @@ async def mark_undercover_inactive_route(
 async def mark_undercover_active_route(
     record_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
 ):
     record = mark_undercover_active(db, record_id)
     if not record:
@@ -173,7 +175,7 @@ async def mark_undercover_active_route(
 async def mark_fictitious_inactive_route(
     record_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
 ):
     record = mark_fictitious_inactive(db, record_id)
     if not record:
@@ -185,7 +187,7 @@ async def mark_fictitious_inactive_route(
 async def mark_fictitious_active_route(
     record_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
 ):
     record = mark_fictitious_active(db, record_id)
     if not record:

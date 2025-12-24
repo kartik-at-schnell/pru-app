@@ -49,12 +49,11 @@ def perform_record_action(
         raise ValueError(f"Unsupported action type: {action_data.action_type}")
     # create the log entry using the authenticated user's ID
     log_entry = RecordActionLog(
-        record_table=action_data.record_table,
+        record_type=action_data.record_table,
         record_id=action_data.record_id,
         action_type_id=action_type.id,
-        user_id=current_user.id, #use the ID from the token/dependency
+        user_id=str(current_user.id), #use the ID from the token/dependency
         notes=action_data.notes,
-        created_at=datetime.now(timezone.utc),
         ip_address=ip_address or "unknown"
     )
     db.add(log_entry)
