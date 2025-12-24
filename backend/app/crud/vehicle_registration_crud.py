@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
-from typing import List, Optional
+from typing import List, Optional, Union
 from app.models import (
     VehicleRegistrationMaster,
     VehicleRegistrationFictitious,
@@ -393,14 +393,21 @@ def mark_fictitious_inactive(db: Session, fc_id: int):
 # bulk ops
 
 # bulk approve
-def bulk_approve(db: Session, record_ids: List[str]):
+def bulk_approve(db: Session, record_ids: List[Union[str, int]]):
     try:
-        # Convert List[MRxxx] to List[int_id]
-        masters = db.query(VehicleRegistrationMaster.id).filter(VehicleRegistrationMaster.record_id.in_(record_ids)).all()
-        ids = [m[0] for m in masters]
+        # Separate possible PKs (ints) from record_ids (strings)
+        int_ids = [rid for rid in record_ids if isinstance(rid, int)]
+        str_ids = [rid for rid in record_ids if isinstance(rid, str)]
+
+        # Get PKs from string record_ids
+        masters = db.query(VehicleRegistrationMaster.id).filter(VehicleRegistrationMaster.record_id.in_(str_ids)).all()
+        ids_from_strings = [m[0] for m in masters]
         
+        # Combine all target IDs
+        all_ids = list(set(int_ids + ids_from_strings))
+
         updated_count = db.query(VehicleRegistrationMaster).filter(
-            VehicleRegistrationMaster.id.in_(ids),
+            VehicleRegistrationMaster.id.in_(all_ids),
             VehicleRegistrationMaster.approval_status != "approved"
         ).update(
             {"approval_status": "approved"},
@@ -413,13 +420,18 @@ def bulk_approve(db: Session, record_ids: List[str]):
         raise HTTPException(status_code=500, detail=f"Bulk approve failed: {str(e)}")
 
 # bulk reject
-def bulk_reject(db: Session, record_ids: List[str]):
+def bulk_reject(db: Session, record_ids: List[Union[str, int]]):
     try:
-        masters = db.query(VehicleRegistrationMaster.id).filter(VehicleRegistrationMaster.record_id.in_(record_ids)).all()
-        ids = [m[0] for m in masters]
+        int_ids = [rid for rid in record_ids if isinstance(rid, int)]
+        str_ids = [rid for rid in record_ids if isinstance(rid, str)]
+
+        masters = db.query(VehicleRegistrationMaster.id).filter(VehicleRegistrationMaster.record_id.in_(str_ids)).all()
+        ids_from_strings = [m[0] for m in masters]
+        
+        all_ids = list(set(int_ids + ids_from_strings))
         
         updated_count = db.query(VehicleRegistrationMaster).filter(
-            VehicleRegistrationMaster.id.in_(ids),
+            VehicleRegistrationMaster.id.in_(all_ids),
             VehicleRegistrationMaster.approval_status != "rejected"
         ).update(
             {"approval_status": "rejected"},
@@ -432,13 +444,18 @@ def bulk_reject(db: Session, record_ids: List[str]):
         raise HTTPException(status_code=500, detail=f"Bulk reject failed: {str(e)}")
 
 # bulk onhold
-def bulk_set_on_hold(db: Session, record_ids: List[str]):
+def bulk_set_on_hold(db: Session, record_ids: List[Union[str, int]]):
     try:
-        masters = db.query(VehicleRegistrationMaster.id).filter(VehicleRegistrationMaster.record_id.in_(record_ids)).all()
-        ids = [m[0] for m in masters]
+        int_ids = [rid for rid in record_ids if isinstance(rid, int)]
+        str_ids = [rid for rid in record_ids if isinstance(rid, str)]
+
+        masters = db.query(VehicleRegistrationMaster.id).filter(VehicleRegistrationMaster.record_id.in_(str_ids)).all()
+        ids_from_strings = [m[0] for m in masters]
+
+        all_ids = list(set(int_ids + ids_from_strings))
 
         updated_count = db.query(VehicleRegistrationMaster).filter(
-            VehicleRegistrationMaster.id.in_(ids),
+            VehicleRegistrationMaster.id.in_(all_ids),
             VehicleRegistrationMaster.approval_status != "on_hold"
         ).update(
             {"approval_status": "on_hold"},
@@ -451,13 +468,18 @@ def bulk_set_on_hold(db: Session, record_ids: List[str]):
         raise HTTPException(status_code=500, detail=f"Bulk on-hold failed: {str(e)}")
 
 #flag rcords active in bulk 
-def bulk_active(db: Session, record_ids: List[str]):
+def bulk_active(db: Session, record_ids: List[Union[str, int]]):
     try:
-        masters = db.query(VehicleRegistrationMaster.id).filter(VehicleRegistrationMaster.record_id.in_(record_ids)).all()
-        ids = [m[0] for m in masters]
+        int_ids = [rid for rid in record_ids if isinstance(rid, int)]
+        str_ids = [rid for rid in record_ids if isinstance(rid, str)]
+
+        masters = db.query(VehicleRegistrationMaster.id).filter(VehicleRegistrationMaster.record_id.in_(str_ids)).all()
+        ids_from_strings = [m[0] for m in masters]
+        
+        all_ids = list(set(int_ids + ids_from_strings))
 
         updated_count = db.query(VehicleRegistrationMaster).filter(
-            VehicleRegistrationMaster.id.in_(ids),
+            VehicleRegistrationMaster.id.in_(all_ids),
             VehicleRegistrationMaster.active_status == False
         ).update(
             {"active_status": True},
@@ -470,13 +492,18 @@ def bulk_active(db: Session, record_ids: List[str]):
         raise HTTPException(status_code=500, detail=f"Bulk activate failed: {str(e)}")
 
 #flag multiple records inactive
-def bulk_inactive(db: Session, record_ids: List[str]):
+def bulk_inactive(db: Session, record_ids: List[Union[str, int]]):
     try:
-        masters = db.query(VehicleRegistrationMaster.id).filter(VehicleRegistrationMaster.record_id.in_(record_ids)).all()
-        ids = [m[0] for m in masters]
+        int_ids = [rid for rid in record_ids if isinstance(rid, int)]
+        str_ids = [rid for rid in record_ids if isinstance(rid, str)]
+
+        masters = db.query(VehicleRegistrationMaster.id).filter(VehicleRegistrationMaster.record_id.in_(str_ids)).all()
+        ids_from_strings = [m[0] for m in masters]
+        
+        all_ids = list(set(int_ids + ids_from_strings))
 
         updated_count = db.query(VehicleRegistrationMaster).filter(
-            VehicleRegistrationMaster.id.in_(ids),
+            VehicleRegistrationMaster.id.in_(all_ids),
             VehicleRegistrationMaster.active_status == True
         ).update(
             {"active_status": False},
@@ -489,13 +516,18 @@ def bulk_inactive(db: Session, record_ids: List[str]):
         raise HTTPException(status_code=500, detail=f"Bulk deactivate failed: {str(e)}")
 
 # bulk delete 
-def bulk_delete(db: Session, record_ids: List[str]):
+def bulk_delete(db: Session, record_ids: List[Union[str, int]]):
     try:
-        masters = db.query(VehicleRegistrationMaster.id).filter(VehicleRegistrationMaster.record_id.in_(record_ids)).all()
-        ids = [m[0] for m in masters]
+        int_ids = [rid for rid in record_ids if isinstance(rid, int)]
+        str_ids = [rid for rid in record_ids if isinstance(rid, str)]
+
+        masters = db.query(VehicleRegistrationMaster.id).filter(VehicleRegistrationMaster.record_id.in_(str_ids)).all()
+        ids_from_strings = [m[0] for m in masters]
+        
+        all_ids = list(set(int_ids + ids_from_strings))
 
         deleted_count = db.query(VehicleRegistrationMaster).filter(
-            VehicleRegistrationMaster.id.in_(ids)
+            VehicleRegistrationMaster.id.in_(all_ids)
         ).delete(synchronize_session=False)
         db.commit()
         return deleted_count

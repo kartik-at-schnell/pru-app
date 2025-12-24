@@ -430,7 +430,7 @@ class MasterDropdownResponse(BaseModel):
 
 # bulk operations request schema
 class BulkActionRequest(BaseModel):
-    record_ids: List[str]  # Array of Master record primary keys (record_id)
+    record_ids: List[Union[str, int]]  # Array of Master record primary keys (record_id)
     
     class Config:
         from_attributes = True

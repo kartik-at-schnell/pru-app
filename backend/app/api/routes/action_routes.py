@@ -14,7 +14,7 @@ from app.models import user_models
 from app.security import get_current_user
 from app.rbac import RoleChecker
 from app.crud.vehicle_registration_crud import (
-    bulk_active, bulk_approve, bulk_inactive, bulk_reject, bulk_set_on_hold, 
+    bulk_active, bulk_approve, bulk_inactive, bulk_reject, bulk_set_on_hold, bulk_delete, 
     mark_active, mark_inactive,
     mark_undercover_active, mark_undercover_inactive,
     mark_fictitious_active, mark_fictitious_inactive
@@ -22,6 +22,10 @@ from app.crud.vehicle_registration_crud import (
 from app.schemas.base_schema import ApiResponse
 from app.schemas.vehicle_registration_schema import BulkActionRequest, BulkActionResponse
 from app.models.driving_license import DriverLicenseOriginalRecord
+from app.crud.driving_license_crud import (
+    bulk_dl_approve, bulk_dl_reject, bulk_dl_set_on_hold, 
+    bulk_dl_active, bulk_dl_inactive, bulk_dl_delete
+)
 
 router = APIRouter(prefix="/actions", tags=["Record Actions"])
 
@@ -331,7 +335,7 @@ def get_dl_action_history(
 def bulk_approve_route(
     request: BulkActionRequest,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
 ):
     updated_count = bulk_approve(db, request.record_ids)
     
@@ -347,7 +351,7 @@ def bulk_approve_route(
 def bulk_reject_route(
     request: BulkActionRequest,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
 ):
     updated_count = bulk_reject(db, request.record_ids)
     
@@ -363,7 +367,7 @@ def bulk_reject_route(
 def bulk_on_hold_route(
     request: BulkActionRequest,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
 ):
     updated_count = bulk_set_on_hold(db, request.record_ids)
     
@@ -379,7 +383,7 @@ def bulk_on_hold_route(
 def bulk_active_route(
     request: BulkActionRequest,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
 ):
     updated_count = bulk_active(db, request.record_ids)
     
@@ -395,7 +399,7 @@ def bulk_active_route(
 def bulk_inactive_route(
     request: BulkActionRequest,
     db: Session = Depends(get_db),
-    current_user: user_models.User = Depends(get_current_user)
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
 ):
     updated_count = bulk_inactive(db, request.record_ids)
     
@@ -406,84 +410,109 @@ def bulk_inactive_route(
     )
     return ApiResponse[BulkActionResponse](data=response_data)
 
-# separate routes for DL for now
+# bulk delete
+@router.post("/bulk-delete", response_model=ApiResponse[BulkActionResponse])
+def bulk_delete_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
+):
+    updated_count = bulk_delete(db, request.record_ids)
+    
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully deleted {updated_count} records"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
 
+# separate routes for DL
 # bulk approve
-def bulk_dl_approve(db: Session, record_ids: List[int]):
-    try:
-        updated_count = db.query(DriverLicenseOriginalRecord).filter(
-            DriverLicenseOriginalRecord.id.in_(record_ids),
-            DriverLicenseOriginalRecord.approval_status != "approved"
-        ).update(
-            {"approval_status": "approved"},
-            synchronize_session=False
-        )
-        db.commit()
-        return updated_count
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Bulk approve failed: {str(e)}")
+@router.post("/bulk-dl-approve", response_model=ApiResponse[BulkActionResponse])
+def bulk_dl_approve_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
+):
+    updated_count = bulk_dl_approve(db, request.record_ids)
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully approved {updated_count} DL records"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
 
 # bulk reject
-def bulk_dl_reject(db: Session, record_ids: List[int]):
-    try:
-        updated_count = db.query(DriverLicenseOriginalRecord).filter(
-            DriverLicenseOriginalRecord.id.in_(record_ids),
-            DriverLicenseOriginalRecord.approval_status != "rejected"
-        ).update(
-            {"approval_status": "rejected"},
-            synchronize_session=False
-        )
-        db.commit()
-        return updated_count
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Bulk reject failed: {str(e)}")
+@router.post("/bulk-dl-reject", response_model=ApiResponse[BulkActionResponse])
+def bulk_dl_reject_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
+):
+    updated_count = bulk_dl_reject(db, request.record_ids)
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully rejected {updated_count} DL records"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
 
 # on_hold
-def bulk_dl_set_on_hold(db: Session, record_ids: List[int]):
-    try:
-        updated_count = db.query(DriverLicenseOriginalRecord).filter(
-            DriverLicenseOriginalRecord.id.in_(record_ids),
-            DriverLicenseOriginalRecord.approval_status != "on_hold"
-        ).update(
-            {"approval_status": "on_hold"},
-            synchronize_session=False
-        )
-        db.commit()
-        return updated_count
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Bulk on-hold failed: {str(e)}")
+@router.post("/bulk-dl-on-hold", response_model=ApiResponse[BulkActionResponse])
+def bulk_dl_on_hold_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
+):
+    updated_count = bulk_dl_set_on_hold(db, request.record_ids)
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully put {updated_count} DL records on hold"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
 
 # activate
-def bulk_dl_active(db: Session, record_ids: List[int]):
-    try:
-        updated_count = db.query(DriverLicenseOriginalRecord).filter(
-            DriverLicenseOriginalRecord.id.in_(record_ids),
-            DriverLicenseOriginalRecord.active_status == False
-        ).update(
-            {"active_status": True},
-            synchronize_session=False
-        )
-        db.commit()
-        return updated_count
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Bulk activate failed: {str(e)}")
+@router.post("/bulk-dl-active", response_model=ApiResponse[BulkActionResponse])
+def bulk_dl_active_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
+):
+    updated_count = bulk_dl_active(db, request.record_ids)
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully activated {updated_count} DL records"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
 
 # bulk deactivate
-def bulk_dl_inactive(db: Session, record_ids: List[int]):
-    try:
-        updated_count = db.query(DriverLicenseOriginalRecord).filter(
-            DriverLicenseOriginalRecord.id.in_(record_ids),
-            DriverLicenseOriginalRecord.active_status == True
-        ).update(
-            {"active_status": False},
-            synchronize_session=False
-        )
-        db.commit()
-        return updated_count
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Bulk deactivate failed: {str(e)}")
+@router.post("/bulk-dl-inactive", response_model=ApiResponse[BulkActionResponse])
+def bulk_dl_inactive_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
+):
+    updated_count = bulk_dl_inactive(db, request.record_ids)
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully deactivated {updated_count} DL records"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
+
+# bulk delete
+@router.post("/bulk-dl-delete", response_model=ApiResponse[BulkActionResponse])
+def bulk_dl_delete_route(
+    request: BulkActionRequest,
+    db: Session = Depends(get_db),
+    current_user: user_models.User = Depends(RoleChecker("Admin"))
+):
+    updated_count = bulk_dl_delete(db, request.record_ids)
+    response_data = BulkActionResponse(
+        success_count=updated_count,
+        failed_count=len(request.record_ids) - updated_count,
+        message=f"Successfully deleted {updated_count} DL records"
+    )
+    return ApiResponse[BulkActionResponse](data=response_data)
