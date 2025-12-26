@@ -508,6 +508,17 @@ def create_fictitious_record(db: Session, original_record_id: int, payload: Driv
     
     if not original:
         raise HTTPException(status_code=404, detail="Original record not found")
+
+    # Check for existing record with same fake_license_number
+    # We check if there is ANY fictitious record with this fake_license_number, regardless of original_record_id
+    # If the requirement was "per original record", we would add filter(DriverLicenseFictitious.original_record_id == original_record_id)
+    # But typically license numbers should be unique globally.
+    existing_record = db.query(DriverLicenseFictitious).filter(
+        DriverLicenseFictitious.fake_license_number == payload.fake_license_number
+    ).first()
+
+    if existing_record:
+        raise HTTPException(status_code=400, detail="Fictitious record with this license number already exists")
         
     fictitious = DriverLicenseFictitious(
         original_record_id=original_record_id,
