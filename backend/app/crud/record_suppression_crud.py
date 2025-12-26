@@ -191,7 +191,6 @@ def get_active_suppressions(
     for entry in entries:
         days_suppressed = (datetime.utcnow() - entry.suppressed_at.replace(tzinfo=None)).days
 
-        # NEW: load native record (VR / DL / etc.)
         record_obj = _get_record_by_type(db, entry.record_type, entry.record_id)
         if record_obj is not None:
             record_detail = {
@@ -415,3 +414,104 @@ def create_suppressed_dl_original(
             status_code=500,
             detail=f"Error creating suppressed DriverLicense: {str(e)}"
         )
+    
+def submit_suppression_request(
+    db: Session,
+    record_type: str,
+    record_id: int,
+    suppression_reason: str,
+    requested_by: str,
+    **kwargs
+) -> RecordSuppressionRequest:
+
+    suppression_req = RecordSuppressionRequest(
+        record_type=record_type,
+        record_id=record_id,
+        reason=suppression_reason,
+        status="pending",
+        approval_status="pending",
+        requested_by=requested_by,
+        suppression_reason=suppression_reason,
+        suppression_justification=kwargs.get("suppression_justification"),
+        confidentiality_level=kwargs.get("confidentiality_level"),
+        effective_date=kwargs.get("effective_date"),
+        expiry_date=kwargs.get("expiry_date"),
+        notes_for_reviewer=kwargs.get("notes_for_reviewer"),
+        attachment_files=kwargs.get("attachment_files"),
+        requestor_email=kwargs.get("requestor_email"),
+        requestor_phone=kwargs.get("requestor_phone"),
+        department=kwargs.get("department"),
+        assigned_unit=kwargs.get("assigned_unit"),
+    )
+    
+    db.add(suppression_req)
+    db.commit()
+    db.refresh(suppression_req)
+    return suppression_req
+
+
+def approve_suppression_request(
+    db: Session,
+    request_id: int,
+    approved_by: str,
+    comments: Optional[str] = None
+) -> RecordSuppressionRequest:
+
+    suppression_req = db.query(RecordSuppressionRequest).filter(
+        RecordSuppressionRequest.id == request_id
+    ).first()
+    
+    if not suppression_req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    if suppression_req.approval_status != "pending":
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Request is already {suppression_req.approval_status}"
+        )
+
+    record = _get_record_by_type(db, suppression_req.record_type, suppression_req.record_id)
+    if record and hasattr(record, 'is_suppressed'):
+        record.is_suppressed = True
+
+    suppression_req.approval_status = "approved"
+    suppression_req.approved_by = approved_by
+    suppression_req.approved_at = datetime.utcnow()
+    suppression_req.approval_comments = comments
+    suppression_req.suppressed_at = datetime.utcnow()
+    suppression_req.status = "active"
+    
+    db.commit()
+    db.refresh(suppression_req)
+    return suppression_req
+
+
+def reject_suppression_request(
+    db: Session,
+    request_id: int,
+    rejected_by: str,
+    comments: Optional[str] = None
+) -> RecordSuppressionRequest:
+
+    suppression_req = db.query(RecordSuppressionRequest).filter(
+        RecordSuppressionRequest.id == request_id
+    ).first()
+    
+    if not suppression_req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    if suppression_req.approval_status != "pending":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Request is already {suppression_req.approval_status}"
+        )
+
+    suppression_req.approval_status = "rejected"
+    suppression_req.approved_by = rejected_by
+    suppression_req.approved_at = datetime.utcnow()
+    suppression_req.approval_comments = comments
+    suppression_req.status = "rejected"
+    
+    db.commit()
+    db.refresh(suppression_req)
+    return suppression_req
